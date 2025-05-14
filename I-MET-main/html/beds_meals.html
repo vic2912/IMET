@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lits&Repas</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1e2838">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/navbar.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="index.html">
+            <div class="logo">
+                <img src="../data/logo1.png" alt="Logo" style="height: 57px;">
+            </div>
+        </a>
+        <div id="userNameDisplay"></div>
+        <button class="menu-button" onclick="toggleMenu()">☰</button>
+    </nav>
+    <div class="menu" id="menu">
+        <a href="calendar.html">Calendrier</a>
+        <a href="beds_meals.html">Tableau de Bord</a>
+        <a href="general_data.html">Informations</a>
+    </div>
+
+    <div id="navigation">
+        <div id="navigation-buttons">
+            <button id="prevWeek">Semaine précédente</button>
+            <button id="nextWeek">Semaine suivante</button>
+        </div>
+        <div id="week-details">
+            <span id="currentWeek">1 - 9 Jan 2024</span>
+        </div>
+    </div>
+
+    <section id="mealsSection">
+        <h2>Repas :</h2>
+        <table id="mealsTable">
+            <!-- Tableau rempli dynamiquement -->
+        </table>
+    </section>
+
+    <section id="bedsSection">
+        <h2>Couchages :</h2>
+        <table id="bedsTable">
+            <!-- Tableau rempli dynamiquement -->
+        </table>
+    </section>
+
+    <script src="../js/firebaseConfig.js" type="module"></script>
+    <script src="../js/beds_meals.js" type="module"></script>
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('menu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+    
+        // Gestionnaire d'événements pour fermer le menu lors d'un clic en dehors
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('menu');
+            const menuButton = document.querySelector('.menu-button');
+    
+            // Vérifiez si le menu est ouvert et si le clic est en dehors du menu et du bouton
+            if (menu.style.display === 'block' && !menu.contains(event.target) && event.target !== menuButton) {
+                menu.style.display = 'none';
+            }
+        });
+    
+        window.onload = function() {
+            // Afficher le nom de l'utilisateur depuis le sessionStorage
+            const userName = sessionStorage.getItem('userName');
+            document.getElementById('userNameDisplay').textContent = userName;
+        };
+    </script>
+    
+</body>
+</html>

@@ -1,0 +1,103 @@
+/* Style pour la barre de navigation principale */
+.top-nav {
+    display: flex;
+    align-items: center;
+    background-color: #1e2838;
+    color: white;
+    padding-top: 0;
+    margin: 0;
+    left: -3px; /* Annuler le padding gauche de 3px appliqué au body */
+    right: -3px; /* Annuler le padding droit de 3px appliqué au body */
+    width: calc(100% + 6px); /* Ajuster la largeur pour prendre en compte le padding */
+}
+
+/* Style pour le logo dans la barre de navigation */
+.logo-img {
+    height: 40px; /* ou la taille souhaitée */
+    width: auto; /* pour conserver les proportions */
+    display: block; /* pour supprimer les marges indésirables autour de l'image */
+}
+
+#userNameDisplay {
+    font-size: 1.4rem; /* Taille de la police, ajustez selon vos besoins */
+    font-family: Helvetica, sans-serif; /* Style de police, modifiez selon vos préférences */
+    margin-left: 10px; /* Marge sur le côté droit */
+    color: white; /* Couleur du texte, ajustez selon le thème de votre barre de navigation */
+    font-weight: bold; /* Rendre le texte en gras */
+    text-align: center; /* Centrer le texte */
+}
+
+/* Style pour le bouton de menu dans la barre de navigation */
+.menu-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-left: auto; /* Pousse le bouton vers la droite */
+}
+
+/* Styles pour le menu déroulant */
+.menu {
+    display: none;
+    background-color: #333;
+    position: fixed;
+    top: 50px; /* Ajustez ceci à la hauteur de votre barre de navigation */
+    left: 0;
+    width: 100%;
+    text-align: center;
+    z-index: 1000; /* Assure que le menu est au-dessus des autres éléments */
+}
+
+.menu a {
+    display: block;
+    color: white;
+    padding: 10px;
+    text-decoration: none;
+}
+
+.menu a:hover {
+    background-color: #ddd;
+    color: black;
+}
+
+/* Ajout de règles médias pour les smartphones */
+@media (max-width: 768px) {
+
+    body {
+        font-size: 18px; /* ou plus grand si nécessaire */
+        padding-top: 5px;
+    }
+
+    .top-nav {
+        position: fixed; /* Positionne la barre de navigation de manière fixe en haut de la page */
+        top: 0;
+        left: 0; /* Commencez à partir de l'extrémité gauche de la page */
+        right: 0; /* Étendez-vous jusqu'à l'extrémité droite de la page */
+        width: 100%; /* La largeur occupera toute la largeur de l'écran */
+        z-index: 1000; /* S'assure que la barre de navigation reste au-dessus des autres éléments */
+        /* Autres styles nécessaires pour la barre de navigation */
+    }
+    .logo-img {
+        height: 4rem ; /* une taille plus petite pour les écrans mobiles */
+        padding: 5px
+    }
+
+    /* Ajuster la taille du bouton de menu pour qu'il soit plus accessible */
+    .menu-button {
+        font-size: 2rem; /* Icône de menu plus grande pour les écrans tactiles */
+        align-items: center;
+    }
+
+    /* Ajuster le positionnement et la taille du menu déroulant */
+
+    .menu {
+        top: 10px; /* Réduction pour correspondre à la hauteur ajustée de la barre de navigation */
+    }
+
+    /* Agrandir les liens du menu pour une meilleure accessibilité */
+    .menu a {
+        padding: 15px; /* Plus de padding pour les liens du menu */
+        font-size: 1.2rem; /* Taille de police augmentée pour les écrans tactiles */
+    }
+}

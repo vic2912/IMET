@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>I MET - Calendar</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/navbar.css">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="index.html">
+            <div class="logo">
+                <img src="../data/logo1.png" alt="Logo" style="height: 57px;">
+            </div>
+        </a>
+        <div id="userNameDisplay"></div>
+        <button class="menu-button" onclick="toggleMenu()">☰</button>
+    </nav>
+    <div class="menu" id="menu">
+        <a href="calendar.html">Calendrier</a>
+        <a href="beds_meals.html">Tableau de Bord</a>
+        <a href="general_data.html">Informations</a>
+    </div>
+
+    <!-- Bouton déplacé au-dessus du calendrier -->
+    <button id="declarerSejour">Nouveau Séjour</button>
+    <button id="retourMois" style="display: none;">Retour Mois</button>
+    <div id="calendar"></div>
+    
+    <!-- Modal Popup -->
+    <div id="modalPopup" class="modal" style="display: none;">
+        <div class="modal-content">
+            <form id="presenceForm">
+                <label for="dateDebut">J'arriverai le:</label>
+                <input type="text" id="dateDebut" name="dateDebut"><br><br>
+
+                <label for="repasDebut">Pour:</label>
+                <select id="repasDebut" name="repasDebut">
+                    <option value="dejeuner">le déjeuner</option>
+                    <option value="diner">le dîner</option>
+                    <option value="nuit">la nuit</option>
+                </select><br><br>
+
+                <label for="dateFin">Je repartirai le:</label>
+                <input type="text" id="dateFin" name="dateFin"><br><br>
+
+                <label for="repasFin">Après:</label>
+                <select id="repasFin" name="repasFin">
+                    <option value="petit-dejeuner">le petit-déjeuner</option>
+                    <option value="dejeuner">le déjeuner</option>
+                    <option value="diner">le dîner</option>
+                </select><br><br>
+
+                <button type="button" id="btnAjouterParticipants" onclick="window.ouvrirChoixParticipants()">Ajouter participants</button>
+                <br>
+                <label for="participants">Participants:</label>
+                <div id="selectedParticipantsList"></div>
+                
+                <div class="modal-buttons">
+                    <button id="btnValider" type="button" class="modal-button" onclick="window.sauvegarderPresence()">Valider</button>
+                    <button id="btnAnnuler" type="button" class="modal-button btn-annuler" onclick="window.fermerModal()">Annuler</button>
+                    <button id="btnSupprimer" type="button" class="modal-button" style="display:none;" onclick="window.supprimerEvenement()">Supprimer</button>
+                </div>
+            </form>
+            <div id="listeEvenements"></div>
+        </div>
+    </div>
+
+    <div id="choixParticipants" class="modal" style="display: none;">
+        <div class="modal-content">
+            <!-- Les containers de participants seront ajoutés dynamiquement ici -->
+            <div id="participantCheckboxes">
+                <!-- Les cases à cocher des participants seront ici -->
+            </div>
+            <!-- Les boutons sont dans leur propre div pour être alignés correctement -->
+            <div class="modal-buttons">
+                <button type="button" onclick="validerSelectionParticipants()">Sélectionner</button>
+                <button type="button" class="btn-annuler" onclick="fermerChoixParticipants()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="../js/main.js"></script>
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('menu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+    
+        // Gestionnaire d'événements pour fermer le menu lors d'un clic en dehors
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('menu');
+            const menuButton = document.querySelector('.menu-button');
+    
+            // Vérifiez si le menu est ouvert et si le clic est en dehors du menu et du bouton
+            if (menu.style.display === 'block' && !menu.contains(event.target) && event.target !== menuButton) {
+                menu.style.display = 'none';
+            }
+        });
+    
+        window.onload = function() {
+            // Afficher le nom de l'utilisateur depuis le sessionStorage
+            const userName = sessionStorage.getItem('userName');
+            document.getElementById('userNameDisplay').textContent = userName;
+        };
+    </script>
+    
+</body>
+</html>

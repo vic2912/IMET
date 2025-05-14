@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>User Management</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <script src="../js/Gestion.js" type="module"></script>
+    <style>
+        #userList {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Aligns items to the start of the flex container */
+            padding: 10px;
+        }
+        #userList button {
+            margin-bottom: 5px; /* Spacing between buttons */
+        }
+    </style>
+</head>
+<body>
+    <div id="userList"></div>
+    <button onclick="openCreateUserModal()">Create New User</button>
+    
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div id="selectedUserId" style="margin: 10px 0;"></div>
+                <label for="userName">Name:</label>
+                <input type="text" id="userName" name="name"><br><br>
+                <label for="userYear">Year of Birth:</label>
+                <input type="number" id="userYear" name="year"><br><br>
+                <label for="userParent">Parent ID:</label>
+                <input type="text" id="userParent" name="parent"><br><br>
+                <label for="userActive">Active:</label>
+                <select id="userActive" name="active">
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                </select><br><br>
+                <button type="button" onclick="saveUser()">Save</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
