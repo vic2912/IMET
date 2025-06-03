@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Supabase</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; margin: 5px; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test de connexion Supabase</h1>
+        
+        <div>
+            <h3>1. Test de connexion</h3>
+            <button onclick="testConnection()">Tester la connexion</button>
+            <div id="connectionResult"></div>
+        </div>
+        
+        <div>
+            <h3>2. Voir les utilisateurs</h3>
+            <button onclick="loadUsers()">Charger les utilisateurs</button>
+            <div id="usersResult"></div>
+        </div>
+        
+        <div>
+            <h3>3. Inscription test</h3>
+            <input type="email" id="testEmail" placeholder="Email">
+            <input type="password" id="testPassword" placeholder="Mot de passe">
+            <input type="text" id="testName" placeholder="Nom">
+            <input type="number" id="testYear" placeholder="Année">
+            <button onclick="testSignUp()">S'inscrire</button>
+            <div id="signupResult"></div>
+        </div>
+        
+        <div>
+            <h3>4. Connexion test</h3>
+            <input type="email" id="loginEmail" placeholder="Email">
+            <input type="password" id="loginPassword" placeholder="Mot de passe">
+            <button onclick="testLogin()">Se connecter</button>
+            <div id="loginResult"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { 
+            supabase, 
+            getUsers, 
+            signUpUser, 
+            loginWithEmail,
+            getCurrentUser 
+        } from './js/supabaseConfig.js';
+
+        window.testConnection = async function() {
+            const result = document.getElementById('connectionResult');
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('count', { count: 'exact' });
+                
+                if (error) throw error;
+                
+                result.innerHTML = `<div class="success">✅ Connexion réussie ! ${data.length} utilisateurs en base</div>`;
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>`;
+            }
+        };
+
+        window.loadUsers = async function() {
+            const result = document.getElementById('usersResult');
+            try {
+                const { data: users, error } = await getUsers();
+                
+                if (error) throw error;
+                
+                let html = '<div class="success">Utilisateurs trouvés :</div><div class="result">';
+                users.forEach(user => {
+                    html += `<p><strong>${user.name}</strong> (${user.year}) - ${user.role}</p>`;
+                });
+                html += '</div>';
+                
+                result.innerHTML = html;
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>`;
+            }
+        };
+
+        window.testSignUp = async function() {
+            const result = document.getElementById('signupResult');
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            const name = document.getElementById('testName').value;
+            const year = parseInt(document.getElementById('testYear').value);
+            
+            if (!email || !password || !name || !year) {
+                result.innerHTML = '<div class="error">Veuillez remplir tous les champs</div>';
+                return;
+            }
+            
+            try {
+                const { data, error } = await signUpUser(email, password, {
+                    name,
+                    year,
+                    role: 'user'
+                });
+                
+                if (error) throw error;
+                
+                result.innerHTML = `<div class="success">✅ Utilisateur créé : ${data.user.name}</div>`;
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>`;
+            }
+        };
+
+        window.testLogin = async function() {
+            const result = document.getElementById('loginResult');
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                result.innerHTML = '<div class="error">Veuillez remplir email et mot de passe</div>';
+                return;
+            }
+            
+            try {
+                const { data, error } = await loginWithEmail(email, password);
+                
+                if (error) throw error;
+                
+                result.innerHTML = `<div class="success">✅ Connexion réussie pour : ${data.user.email}</div>`;
+                
+                // Tester récupération utilisateur complet
+                const { user } = await getCurrentUser();
+                if (user) {
+                    result.innerHTML += `<div class="result">Utilisateur complet : ${user.name} (${user.role})</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>
