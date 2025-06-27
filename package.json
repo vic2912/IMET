@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.10",
+    "notistack": "^3.0.2",
+    "react-query": "^3.39.3"
+  }
+}

@@ -1,0 +1,56 @@
+.
+├── App.css
+├── App.test.tsx
+├── App.tsx
+├── arborescence.txt
+├── assets
+├── components
+│   ├── AdminPanel.tsx
+│   ├── BookingWizard.tsx
+│   ├── CreateUsersDialog.tsx
+│   ├── FamilyRelationsDialog.tsx
+│   ├── NotificationBadge.tsx
+│   ├── NotificationPanel.tsx
+│   ├── ParticipantSelector.tsx
+│   ├── forms
+│   ├── layout
+│   └── ui
+├── context
+├── hooks
+│   ├── index.ts
+│   ├── useAdmin.ts
+│   ├── useAuth.ts
+│   ├── useBookings.ts
+│   ├── useExpenses.ts
+│   ├── useNotification.ts
+│   ├── useNotifications.ts
+│   └── useUsers.ts
+├── index.css
+├── index.tsx
+├── logo.svg
+├── pages
+├── react-app-env.d.ts
+├── reportWebVitals.ts
+├── services
+│   ├── admin.ts
+│   ├── auth.ts
+│   ├── bookings.ts
+│   ├── expenses.ts
+│   ├── index.ts
+│   ├── notificationService.ts
+│   ├── supabase.ts
+│   └── userService.ts
+├── setupTests.ts
+├── styles
+├── types
+│   ├── admin.ts
+│   ├── auth.ts
+│   ├── booking.ts
+│   ├── common.ts
+│   ├── expense.ts
+│   ├── family.ts
+│   ├── index.ts
+│   └── notification.ts
+└── utils
+
+12 directories, 41 files
