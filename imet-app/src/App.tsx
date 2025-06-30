@@ -23,6 +23,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminPricingPage from './pages/AdminPricingPage';
 import { AllBookingsPage } from './pages/AllBookingsPage';
 import { AdminBookingsPage } from './pages/AdminBookingsPage';
+import { CreateUserPage } from './pages/CreateUserPage';
 
 
 // Layout
@@ -58,6 +59,7 @@ const App: React.FC = () => {
                         else showError(message);
                       }} />} />
                       <Route path="/admin/utilisateurs" element={<AdminUsersPage />} />
+                      <Route path="/admin/create-user" element={<CreateUserPage />} />
                       <Route path="/admin/bookings" element={<AdminBookingsPage />} />
                       <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
                       {/* <Route path="/admin/evenements" element={<AdminEventsPage />} /> */}

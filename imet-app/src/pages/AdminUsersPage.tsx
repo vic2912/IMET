@@ -1,6 +1,7 @@
 // src/pages/AdminUsersPage.tsx
 
 import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom"; 
 import {
   Box, Button, CircularProgress, Dialog, DialogActions,
   DialogContent, DialogTitle, IconButton, Paper, Stack,
@@ -21,6 +22,8 @@ export const AdminUsersPage: React.FC = () => {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { enqueueSnackbar } = useSnackbar();
+  const navigate = useNavigate();
+
 
   const handleCreateUser = async (data: any) => {
     const user = await userService.createUser(data);
@@ -57,9 +60,9 @@ export const AdminUsersPage: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5">Gestion des utilisateurs</Typography>
         <Box>
-          <Button startIcon={<PersonAdd />} onClick={() => setOpenCreateUser(true)} sx={{ mr: 2 }}>
-            Créer un utilisateur
-          </Button>
+        <Button startIcon={<PersonAdd />} onClick={() => navigate('/admin/create-user')} sx={{ mr: 2 }}>
+          Créer un utilisateur
+        </Button>
           <Button onClick={() => refetch()}>Actualiser</Button>
         </Box>
       </Box>
