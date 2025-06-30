@@ -21,6 +21,12 @@ export const AdminMenu: React.FC = () => {
         <ListItemText primary="Utilisateurs" />
       </ListItemButton>
 
+      <ListItemButton onClick={() => navigate('/admin/bookings')}>
+        <ListItemIcon><FamilyRestroom /></ListItemIcon>
+        <ListItemText primary="Tous les séjours" />
+      </ListItemButton>
+
+
       <ListItemButton onClick={() => navigate('/admin/evenements')}>
         <ListItemIcon><Event /></ListItemIcon>
         <ListItemText primary="Événements" />

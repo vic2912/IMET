@@ -113,6 +113,7 @@ async create(userId: string, bookingData: ExtendedCreateBookingDataForServer): P
 
 
   async update(id: string, updates: UpdateBookingData): Promise<{ data: Booking | null; error: string | null }> {
+    /*
     if (updates.start_date || updates.end_date) {
       const currentBooking = await this.getById(id);
       if (currentBooking.error || !currentBooking.data) return { data: null, error: 'Réservation introuvable' };
@@ -124,7 +125,7 @@ async create(userId: string, bookingData: ExtendedCreateBookingDataForServer): P
       if (conflictCheck.error) return { data: null, error: conflictCheck.error };
       if (conflictCheck.hasConflict) return { data: null, error: 'Conflit de dates' };
     }
-
+    */
     return executeQuery(async () => {
       const { data, error } = await supabase
         .from('bookings')

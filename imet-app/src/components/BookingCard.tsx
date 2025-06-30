@@ -33,12 +33,14 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking, onEdit }) => 
     : booking.persons_details || [];
 
   const { user } = useAuth();
+  const genericAdults = persons.filter(p => p.name === 'Adulte').length;
+  const genericChildren = persons.filter(p => p.name === 'Enfant').length;
   const namedPersons = persons.filter(p => p.name !== 'Adulte' && p.name !== 'Enfant');
-  const unnamedAdults = booking.adults - namedPersons.filter(p => p.name !== 'Enfant').length;
-  const unnamedChildren = booking.children - namedPersons.filter(p => p.name !== 'Adulte').length;
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
-  const updateBookingStatus = useUpdateBookingStatus();
+  const updateBookingStatus = useUpdateBookingStatus(user?.id || '');
+
   const queryClient = useQueryClient();
 
   const translateTimeLabel = (time: string) => {
@@ -79,12 +81,13 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking, onEdit }) => 
                 {namedPersons.map((p, idx) => (
                   <Chip key={idx} label={p.name} size="small" sx={{ mb: 0.5 }} />
                 ))}
-                {unnamedAdults > 0 && (
-                  <Chip label={`${unnamedAdults} adulte${unnamedAdults > 1 ? 's' : ''}`} size="small" sx={{ mb: 0.5 }} />
+                {genericAdults > 0 && (
+                  <Chip label={`${genericAdults} adulte${genericAdults > 1 ? 's' : ''}`} size="small" sx={{ mb: 0.5 }} />
                 )}
-                {unnamedChildren > 0 && (
-                  <Chip label={`${unnamedChildren} enfant${unnamedChildren > 1 ? 's' : ''}`} size="small" sx={{ mb: 0.5 }} />
+                {genericChildren > 0 && (
+                  <Chip label={`${genericChildren} enfant${genericChildren > 1 ? 's' : ''}`} size="small" sx={{ mb: 0.5 }} />
                 )}
+
               </>
             </Stack>
 
@@ -111,6 +114,9 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking, onEdit }) => 
           setDialogOpen(false);         // ✅ ferme la modale
         }}
         onUpdateStatus={(newStatus) => {
+            console.log('📦 Statut à mettre à jour :', newStatus);
+            console.log('👤 User ID dans BookingCard:', user?.id);
+
           updateBookingStatus.mutate(
             { id: booking.id, status: newStatus },
             {
@@ -118,9 +124,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking, onEdit }) => 
                 enqueueSnackbar('Statut modifié avec succès', { variant: 'success' });
               },
               onSettled: () => {
-                //queryClient.invalidateQueries({ queryKey: ['bookings'] });
-                //queryClient.invalidateQueries({ queryKey: ['bookings', booking.user_id] });
-                //queryClient.invalidateQueries({ queryKey: ['bookings', undefined] });
+                console.log('🧹 Invalidation avec key :', ['bookings', user?.id]);
                 queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
                 setDialogOpen(false);
               }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Stack, Typography, Chip
+  Button, Stack, Typography, Chip, Box
 } from '@mui/material';
 import { getStatusLabel } from '../utils/bookingUtils';
 import { getChipColor } from '../utils/bookingUtils';
@@ -22,6 +22,14 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({ open, booking, onC
   const handleStatusChange = (newStatus: SejourStatus) => {
     setTargetStatus(newStatus);
     setConfirmOpen(true);
+  };
+  const getTimeLabel = (code: string): string => {
+    switch (code) {
+      case 'morning': return 'Matin';
+      case 'afternoon': return 'Après-midi';
+      case 'evening': return 'Soir';
+      default: return code;
+    }
   };
 
   const confirmStatusChange = () => {
@@ -52,6 +60,41 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({ open, booking, onC
               Nombre de participants : {booking.adults} adultes et {booking.children} enfants
             </Typography>
           </Stack>
+          {booking.persons_details && (
+            <Stack spacing={2} mt={3}>
+              <Typography variant="subtitle1">Participants :</Typography>
+
+              {(typeof booking.persons_details === 'string'
+                ? JSON.parse(booking.persons_details)
+                : booking.persons_details
+              ).map((p: any, idx: number) => (
+                <Box
+                  key={idx}
+                  sx={{
+                    border: '1px solid #ddd',
+                    borderRadius: 2,
+                    p: 2,
+                    backgroundColor: '#fafafa',
+                    boxShadow: 1
+                  }}
+                >
+                  <Typography fontWeight="bold" gutterBottom>
+                    {p.name}
+                  </Typography>
+
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <Typography variant="body2">
+                      Arrivée : {p.arrivalDate?.slice?.(0, 10)} ({getTimeLabel(p.arrivalTime)})
+                    </Typography>
+                    <Typography variant="body2">
+                      Départ : {p.departureDate?.slice?.(0, 10)} ({getTimeLabel(p.departureTime)})
+                    </Typography>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
+          )}
+
         </DialogContent>
         <DialogActions>
           <Button

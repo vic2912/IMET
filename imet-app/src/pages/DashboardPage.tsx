@@ -148,7 +148,7 @@ export const DashboardPage: React.FC = () => {
           />
 
           {/* Édition des participants d’un séjour existant */}
-          {bookingToEdit && showEditDialog && (
+          {bookingToEdit && showEditDialog && user && (
             <EditBookingDialog
               open={true}
               booking={bookingToEdit}

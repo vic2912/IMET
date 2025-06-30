@@ -3,6 +3,8 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Select,
   Button, IconButton, TextField, MenuItem, Stack, Typography, Box
 } from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
+
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useTheme } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';
@@ -33,10 +35,12 @@ const timeLabels = { morning: 'Matin', afternoon: 'Après-midi', evening: 'Soir'
 export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({ open, onClose, booking }) => {
   const { user } = useAuth();
   const { closeFamily } = useFamily(user?.id || '');
-  const { data: allBookings = [] } = useBookings();
+  const { data: allBookings = [] } = useBookings(user?.id ?? '');
+  console.log("👤 Bookings du user :", allBookings.map(b => b.id));
   const updateBooking = useUpdateBooking();
   const { enqueueSnackbar } = useSnackbar();
   const isMobile = useMediaQuery(useTheme().breakpoints.down('sm'));
+  const queryClient = useQueryClient();
 
   const [personDetails, setPersonDetails] = useState<PersonDetails[]>([]);
   const [isReadOnly, setIsReadOnly] = useState(false);
@@ -99,14 +103,25 @@ export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({ open, onCl
     setPersonDetails(updated);
   };
 
-  const handleAddPerson = () => {
+  const handleAddAdult = () => {
     setPersonDetails([...personDetails, {
-      name: 'Nouveau participant',
+      name: 'Adulte',
       arrivalDate: booking.start_date ? new Date(booking.start_date) : null,
       arrivalTime: booking.arrival_time,
       departureDate: booking.end_date ? new Date(booking.end_date) : null,
       departureTime: booking.departure_time,
       person_type: 'adulte_amis'
+    }]);
+  };
+
+  const handleAddChild = () => {
+    setPersonDetails([...personDetails, {
+      name: 'Enfant',
+      arrivalDate: booking.start_date ? new Date(booking.start_date) : null,
+      arrivalTime: booking.arrival_time,
+      departureDate: booking.end_date ? new Date(booking.end_date) : null,
+      departureTime: booking.departure_time,
+      person_type: 'enfant_amis'
     }]);
   };
 
@@ -122,11 +137,21 @@ export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({ open, onCl
       }
     }
 
+    console.log('📦 DEBUG booking.id        :', booking.id);
+    console.log('📦 DEBUG booking.user_id  :', booking.user_id);
+    console.log('📦 DEBUG user.id          :', user?.id);
+    console.log('📅 DEBUG start date       :', booking.start_date);
+    console.log('📅 DEBUG end date         :', booking.end_date);
+    console.log('📚 DEBUG allBookings ids  :', allBookings.map(b => b.id));
+
     const overlapping = hasOverlappingBooking(
       new Date(booking.start_date),
       new Date(booking.end_date),
       booking.user_id,
-      allBookings.filter(b => b.id !== booking.id)
+      allBookings,
+      booking.id,
+      booking.arrival_time,
+      booking.departure_time
     );
 
     if (overlapping) {
@@ -136,16 +161,26 @@ export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({ open, onCl
 
     try {
       const totalCost = await calculateBookingCost(personDetails);
+      const adults = personDetails.filter(p =>
+        p.person_type?.startsWith('adulte')
+      ).length;
+
+      const children = personDetails.filter(p =>
+        p.person_type?.startsWith('enfant')
+      ).length;
 
       updateBooking.mutate({
         id: booking.id,
         data: {
           persons_details: personDetails,
-          total_cost: totalCost
+          total_cost: totalCost,
+          adults,
+          children
         }
       }, {
         onSuccess: () => {
           enqueueSnackbar('Séjour mis à jour avec succès.', { variant: 'success' });
+          queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
           onClose();
         },
         onError: (err) => {
@@ -161,7 +196,7 @@ export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({ open, onCl
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>Modifier les participants</DialogTitle>
       <DialogContent>
-        <Stack spacing={2}>
+        <Stack spacing={3} mt={1}>
           {personDetails.map((person, index) => {
             const options = (person.person_type || '').startsWith('adulte')
               ? getAdultOptions()
@@ -170,9 +205,18 @@ export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({ open, onCl
             const isValueValid = options.some(opt => opt.name === person.name);
 
             return (
-              <Box key={index} sx={{ border: '1px solid #ccc', borderRadius: 2, p: 2 }}>
+              <Box
+                key={index}
+                sx={{
+                  border: '1px solid #ddd',
+                  borderRadius: 2,
+                  p: 2,
+                  boxShadow: 1,
+                  backgroundColor: '#fafafa'
+                }}
+              >
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography>Participant {index + 1}</Typography>
+                  <Typography fontWeight="bold">Participant {index + 1}</Typography>
                   {!isReadOnly && (
                     <IconButton onClick={() => handleRemovePerson(index)}>
                       <CloseIcon />
@@ -180,99 +224,131 @@ export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({ open, onCl
                   )}
                 </Stack>
 
-                <Stack direction={isMobile ? 'column' : 'row'} spacing={2} mt={1}>
-                  <Select
-                    fullWidth
-                    label="Nom"
-                    value={isValueValid ? person.name : ''}
-                    onChange={(e) => {
-                      const updated = [...personDetails];
-                      const selectedName = e.target.value;
-                      updated[index].name = selectedName;
+                {/* Ligne 1 : nom, arrivée (date/heure) */}
+                <Stack
+                  direction={{ xs: 'column', md: 'row' }}
+                  spacing={2}
+                  mt={2}
+                  alignItems="flex-start"
+                >
+                  <Box sx={{ flex: 1, minWidth: 180 }}>
+                    <Select
+                      fullWidth
+                      label="Nom"
+                      value={isValueValid ? person.name : ''}
+                      onChange={(e) => {
+                        const updated = [...personDetails];
+                        const selectedName = e.target.value;
+                        updated[index].name = selectedName;
 
-                      const matchingFamily = closeFamily.find(f => f.full_name === selectedName);
-                      if (matchingFamily) {
-                        updated[index].person_type = isAdult(matchingFamily.birth_date)
-                          ? 'adulte_famille'
-                          : 'enfant_famille';
-                      } else {
-                        updated[index].person_type = person.person_type?.startsWith('adulte')
-                          ? 'adulte_amis'
-                          : 'enfant_amis';
-                      }
+                        const matchingFamily = closeFamily.find(f => f.full_name === selectedName);
+                        if (matchingFamily) {
+                          updated[index].person_type = isAdult(matchingFamily.birth_date)
+                            ? 'adulte_famille'
+                            : 'enfant_famille';
+                        } else {
+                          updated[index].person_type = person.person_type?.startsWith('adulte')
+                            ? 'adulte_amis'
+                            : 'enfant_amis';
+                        }
 
-                      setPersonDetails(updated);
-                    }}
-                  >
-                    {options.map(option => (
-                      <MenuItem key={option.id} value={option.name}>
-                        {option.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                        setPersonDetails(updated);
+                      }}
+                    >
+                      {options.map(option => (
+                        <MenuItem key={option.id} value={option.name}>
+                          {option.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </Box>
 
-                  <DatePicker
-                    label="Arrivée"
-                    value={person.arrivalDate}
-                    onChange={(d) => handleChangePerson(index, 'arrivalDate', d)}
-                    disabled={isReadOnly}
-                  />
+                  <Box sx={{ flex: 1, minWidth: 160 }}>
+                    <DatePicker
+                      label="Date d'arrivée"
+                      value={person.arrivalDate}
+                      onChange={(d) => handleChangePerson(index, 'arrivalDate', d)}
+                      disabled={isReadOnly}
+                    />
+                  </Box>
 
-                  <TextField
-                    select
-                    label="Heure arrivée"
-                    value={person.arrivalTime}
-                    onChange={(e) => handleChangePerson(index, 'arrivalTime', e.target.value)}
-                    disabled={isReadOnly}
-                    fullWidth
-                  >
-                    {timeOptions.map(t => (
-                      <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>
-                    ))}
-                  </TextField>
+                  <Box sx={{ flex: 1, minWidth: 140 }}>
+                    <TextField
+                      select
+                      label="Heure d'arrivée"
+                      value={person.arrivalTime}
+                      onChange={(e) => handleChangePerson(index, 'arrivalTime', e.target.value)}
+                      disabled={isReadOnly}
+                      fullWidth
+                    >
+                      {timeOptions.map(t => (
+                        <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Box>
                 </Stack>
 
-                <Stack direction={isMobile ? 'column' : 'row'} spacing={2} mt={1}>
-                  <DatePicker
-                    label="Départ"
-                    value={person.departureDate}
-                    onChange={(d) => handleChangePerson(index, 'departureDate', d)}
-                    disabled={isReadOnly}
-                  />
+                {/* Ligne 2 : départ (date/heure) */}
+                <Stack
+                  direction={{ xs: 'column', md: 'row' }}
+                  spacing={2}
+                  mt={2}
+                  alignItems="flex-start"
+                >
+                  <Box sx={{ flex: 1, minWidth: 160 }}>
+                    <DatePicker
+                      label="Date de départ"
+                      value={person.departureDate}
+                      onChange={(d) => handleChangePerson(index, 'departureDate', d)}
+                      disabled={isReadOnly}
+                    />
+                  </Box>
 
-                  <TextField
-                    select
-                    label="Heure départ"
-                    value={person.departureTime}
-                    onChange={(e) => handleChangePerson(index, 'departureTime', e.target.value)}
-                    disabled={isReadOnly}
-                    fullWidth
-                  >
-                    {timeOptions.map(t => (
-                      <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>
-                    ))}
-                  </TextField>
+                  <Box sx={{ flex: 1, minWidth: 140 }}>
+                    <TextField
+                      select
+                      label="Heure de départ"
+                      value={person.departureTime}
+                      onChange={(e) => handleChangePerson(index, 'departureTime', e.target.value)}
+                      disabled={isReadOnly}
+                      fullWidth
+                    >
+                      {timeOptions.map(t => (
+                        <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Box>
                 </Stack>
               </Box>
             );
           })}
 
-
+          {/* Boutons d'ajout */}
           {!isReadOnly && (
-            <Button startIcon={<AddIcon />} onClick={handleAddPerson}>
-              Ajouter un participant
-            </Button>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Button startIcon={<AddIcon />} onClick={handleAddAdult} variant="outlined">
+                Ajouter un adulte
+              </Button>
+              <Button startIcon={<AddIcon />} onClick={handleAddChild} variant="outlined">
+                Ajouter un enfant
+              </Button>
+            </Stack>
           )}
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Annuler</Button>
-        {!isReadOnly && (
-          <Button variant="contained" onClick={handleSave}>
-            Enregistrer
-          </Button>
-        )}
+
+      {/* Actions en bas */}
+      <DialogActions sx={{ px: 3, py: 2 }}>
+        <Stack direction="row" spacing={2} justifyContent="flex-end" width="100%">
+          <Button onClick={onClose} variant="outlined">Annuler</Button>
+          {!isReadOnly && (
+            <Button variant="contained" onClick={handleSave}>
+              Enregistrer
+            </Button>
+          )}
+        </Stack>
       </DialogActions>
     </Dialog>
   );
+
 };

@@ -8,26 +8,68 @@ import type { User } from '../types/family';
  * Vérifie si une nouvelle réservation chevauche une réservation existante
  * pour le même utilisateur.
  */
+
+const arrivalOrder = {
+  morning: 1,
+  afternoon: 2,
+  evening: 3
+};
+
+
 export function hasOverlappingBooking(
-  startDate: Date,
-  endDate: Date,
+  newStart: Date,
+  newEnd: Date,
   userId: string,
   bookings: Booking[],
-  excludeBookingId?: string
+  excludeBookingId?: string,
+  newArrivalTime?: 'morning' | 'afternoon' | 'evening',
+  newDepartureTime?: 'morning' | 'afternoon' | 'evening'
 ): boolean {
-  return bookings.some(b => {
-    if (b.user_id !== userId) return false;
-    if (excludeBookingId && b.id === excludeBookingId) return false;
+  const arrivalOrder = {
+    morning: 1,
+    afternoon: 2,
+    evening: 3
+  };
 
-    const existingStart = new Date(b.start_date);
-    const existingEnd = new Date(b.end_date);
+  for (const b of bookings) {
+    if (excludeBookingId && b.id === excludeBookingId) continue;
+    if (b.user_id !== userId) continue;
 
-    return (
-      startDate <= existingEnd &&
-      endDate >= existingStart
-    );
-  });
+    const bStart = new Date(b.start_date);
+    const bEnd = new Date(b.end_date);
+
+    // ✅ cas 1 : autre séjour finit le même jour, nous arrivons plus tard
+    if (bEnd.getTime() === newStart.getTime()) {
+      const endRank = arrivalOrder[b.departure_time as keyof typeof arrivalOrder];
+      const startRank = arrivalOrder[newArrivalTime as keyof typeof arrivalOrder];
+
+      if (startRank > endRank) {
+        console.log(`🟢 OK : ${b.id} finit ${b.departure_time}, on arrive ${newArrivalTime}`);
+        continue;
+      }
+    }
+
+    // ✅ cas 2 : nous finissons et un autre séjour commence plus tard
+    if (newEnd.getTime() === bStart.getTime()) {
+      const newEndRank = arrivalOrder[newDepartureTime as keyof typeof arrivalOrder];
+      const bStartRank = arrivalOrder[b.arrival_time as keyof typeof arrivalOrder];
+
+      if (bStartRank > newEndRank) {
+        console.log(`🟢 OK : on finit ${newDepartureTime}, ${b.id} arrive ${b.arrival_time}`);
+        continue;
+      }
+    }
+
+    const hasConflict = newStart <= bEnd && newEnd >= bStart;
+    if (hasConflict) {
+      console.warn(`⚠️ Conflit détecté entre le séjour en cours et ${b.id}`);
+      return true;
+    }
+  }
+
+  return false;
 }
+
 
 /**
  * Calcul des statistiques générales des réservations

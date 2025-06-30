@@ -33,8 +33,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogoutSuccess })
 
   const navItems = [
     { label: 'Tableau de bord', path: '/dashboard', icon: <Home /> },
-    { label: 'Réservations', path: '/bookings', icon: <CalendarToday /> },
+    { label: 'Calendrier', path: '/bookings', icon: <CalendarToday /> },
     { label: 'Dépenses', path: '/expenses', icon: <Euro /> },
+    { label: 'Mes séjours', path: '/bookings/all', icon: <CalendarToday /> },
     ...(user.is_admin ? [{ label: 'Administration', path: '/admin', icon: <Settings /> }] : [])
   ];
 
