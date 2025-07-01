@@ -56,6 +56,9 @@ export const authService = {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: signupData.email,
         password: signupData.password,
+        options: {
+          emailRedirectTo: 'https://imet-olive.vercel.app/auth/callback'
+        }
       });
 
       if (authError) {
