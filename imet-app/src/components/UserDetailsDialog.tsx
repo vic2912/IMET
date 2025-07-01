@@ -113,8 +113,10 @@ export const UserDetailsDialog: React.FC<UserDetailsDialogProps> = ({ open, user
             fullWidth
             type="email"
             value={formData.email || ''}
-            onChange={(e) => handleChange('email', e.target.value)}
+            disabled
+            helperText="L'email ne peut pas être modifié."
           />
+
           <TextField
             label="Téléphone"
             fullWidth

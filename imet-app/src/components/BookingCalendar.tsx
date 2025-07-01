@@ -81,7 +81,9 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings }) =>
 
   const bookingsByDay = useMemo(() => {
     const map: Record<string, Booking[]> = {};
-    bookings.forEach((booking) => {
+    bookings
+    .filter(b => b.status !== 'cancelled')
+    .forEach((booking) => {
       const start = parseISO(booking.start_date);
       const end = parseISO(booking.end_date);
       eachDayOfInterval({ start, end }).forEach((date) => {

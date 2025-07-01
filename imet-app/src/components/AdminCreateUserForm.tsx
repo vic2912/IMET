@@ -1,6 +1,10 @@
-// src/components/AdminCreateUserForm.tsx
 import React, { useState } from "react";
-import { supabase } from "../services/supabase"; // adapte ce chemin selon ton projet
+import type { SelectChangeEvent } from "@mui/material";
+import {
+  Box, Button, Checkbox, FormControl, FormControlLabel,
+  InputLabel, MenuItem, Select, Stack, TextField, Typography, Alert
+} from "@mui/material";
+import { supabase } from "../services/supabase";
 
 export default function AdminCreateUserForm() {
   const [form, setForm] = useState({
@@ -15,33 +19,59 @@ export default function AdminCreateUserForm() {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const target = e.target as HTMLInputElement;
-    const { name, value, type, checked } = target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
 
+  const handleSelectChange = (e: SelectChangeEvent) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setMessage(null);
+    setError(null);
+
+    if (!form.email || !form.password || !form.full_name || !form.birth_date) {
+      setError("Tous les champs obligatoires doivent être remplis, y compris la date de naissance.");
+      return;
+    }
+
+    setLoading(true);
 
     try {
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", form.email)
+        .single();
+
+      if (existing) {
+        setError("Un utilisateur avec cet email existe déjà.");
+        setLoading(false);
+        return;
+      }
+
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
 
       if (!token) {
         throw new Error("Utilisateur non authentifié !");
       }
-
       //Ligne développement
       //const response = await fetch("https://dcydlyjmfhzhjtjtjcoo.supabase.co/functions/v1/create_user", {
 
-              //Ligne Production
+      //Ligne Production
       const response = await fetch("https://xwxlmrzemlrxtzowznfv.supabase.co/functions/v1/create_user", {
 
         method: "POST",
@@ -58,7 +88,7 @@ export default function AdminCreateUserForm() {
         throw new Error(result.error || "Erreur inconnue");
       }
 
-      setMessage(`Utilisateur créé avec succès : ${result.user.full_name}`);
+      setMessage(`✅ Utilisateur créé : ${result.user.full_name}`);
       setForm({
         email: "",
         password: "",
@@ -69,47 +99,98 @@ export default function AdminCreateUserForm() {
         is_active: true,
       });
     } catch (error: any) {
-      setMessage(`Erreur : ${error.message}`);
+      setError(`❌ ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: "auto" }}>
-      <h2>Créer un utilisateur</h2>
+    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 500, mx: "auto", mt: 4 }}>
+      <Typography variant="h5" gutterBottom>Créer un utilisateur</Typography>
 
-      <label>Email</label>
-      <input type="email" name="email" value={form.email} onChange={handleChange} required />
+      <Stack spacing={2}>
+        <TextField
+          label="Email"
+          name="email"
+          type="email"
+          value={form.email}
+          onChange={handleChange}
+          required
+          fullWidth
+        />
 
-      <label>Mot de passe</label>
-      <input type="password" name="password" value={form.password} onChange={handleChange} required />
+        <TextField
+          label="Mot de passe"
+          name="password"
+          type="password"
+          value={form.password}
+          onChange={handleChange}
+          required
+          fullWidth
+        />
 
-      <label>Nom complet</label>
-      <input type="text" name="full_name" value={form.full_name} onChange={handleChange} required />
+        <TextField
+          label="Nom complet"
+          name="full_name"
+          value={form.full_name}
+          onChange={handleChange}
+          required
+          fullWidth
+        />
 
-      <label>Téléphone</label>
-      <input type="tel" name="phone" value={form.phone} onChange={handleChange} />
+        <TextField
+          label="Téléphone"
+          name="phone"
+          type="tel"
+          value={form.phone}
+          onChange={handleChange}
+          fullWidth
+        />
 
-      <label>Date de naissance</label>
-      <input type="date" name="birth_date" value={form.birth_date} onChange={handleChange} />
+        <TextField
+          label="Date de naissance"
+          name="birth_date"
+          type="date"
+          value={form.birth_date}
+          onChange={handleChange}
+          InputLabelProps={{ shrink: true }}
+          required
+          fullWidth
+        />
 
-      <label>Rôle</label>
-      <select name="role" value={form.role} onChange={handleChange}>
-        <option value="user">Utilisateur</option>
-        <option value="admin">Administrateur</option>
-      </select>
+        <FormControl fullWidth>
+          <InputLabel id="role-label">Rôle</InputLabel>
+          <Select
+            labelId="role-label"
+            name="role"
+            value={form.role}
+            label="Rôle"
+            onChange={handleSelectChange}
+          >
+            <MenuItem value="user">Utilisateur</MenuItem>
+            <MenuItem value="admin">Administrateur</MenuItem>
+          </Select>
+        </FormControl>
 
-      <label>
-        <input type="checkbox" name="is_active" checked={form.is_active} onChange={handleChange} />
-        Actif
-      </label>
+        <FormControlLabel
+          control={
+            <Checkbox
+              name="is_active"
+              checked={form.is_active}
+              onChange={handleChange}
+            />
+          }
+          label="Compte actif"
+        />
 
-      <button type="submit" disabled={loading}>
-        {loading ? "Création en cours..." : "Créer l'utilisateur"}
-      </button>
+        <Button type="submit" variant="contained" disabled={loading} fullWidth>
+          {loading ? "Création en cours..." : "Créer l'utilisateur"}
+        </Button>
 
-      {message && <p>{message}</p>}
-    </form>
+        {error && <Alert severity="error">{error}</Alert>}
+        {message && <Alert severity="success">{message}</Alert>}
+      </Stack>
+    </Box>
   );
 }

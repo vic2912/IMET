@@ -38,15 +38,20 @@ export const DashboardPage: React.FC = () => {
   }));
 
   const unpaidBookings = bookings
-    .filter(b => b.status !== 'paid' && isBefore(new Date(b.end_date), today))
+    .filter(b => b.status !== 'paid' && b.status !== 'cancelled' && isBefore(new Date(b.end_date), today))
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
   const futureBookings = bookings
     .filter(b => isAfter(new Date(b.start_date), today))
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
-  const total = bookings.reduce((sum, b) => sum + (b.total_cost ?? 0), 0);
+
+  const total = bookings
+  .filter(b => b.status !== 'cancelled')
+  .reduce((sum, b) => sum + (b.total_cost ?? 0), 0);
+
   const paid = bookings.reduce((sum, b) => sum + (b.status === 'paid' ? (b.total_cost ?? 0) : 0), 0);
+  
   const due = total - paid;
 
   return (
