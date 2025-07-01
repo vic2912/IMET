@@ -84,6 +84,15 @@ export interface BookingFormData {
   comments: string;
 }
 
+export interface DailyPresence {
+  date: string;
+  morning: PersonDetails[];
+  lunch: PersonDetails[];
+  dinner: PersonDetails[];
+  nuit: PersonDetails[];
+  maxPeople: number;
+}
+
 export interface BookingStats {
   total: number;
   confirmed: number;
