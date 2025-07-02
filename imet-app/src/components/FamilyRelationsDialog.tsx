@@ -1,43 +1,18 @@
 // src/components/FamilyRelationsDialog.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Box,
-  Typography,
-  Divider,
-  CircularProgress,
-  Alert,
-  Autocomplete,
-  FormControlLabel,
-  Checkbox,
-  Chip
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, List,
+  ListItem, ListItemText, ListItemSecondaryAction, IconButton, TextField,
+  FormControl, InputLabel, Select, MenuItem, Box, Typography, Divider,
+  CircularProgress, Alert, Autocomplete, FormControlLabel, Checkbox,
+  Chip } from '@mui/material';
 
-import {
-  Delete,
-  PersonAdd,
-  FamilyRestroom,
-  ChildCare,
-  Elderly
+import { Delete, PersonAdd, FamilyRestroom, ChildCare, Elderly
 } from '@mui/icons-material';
 
-import type { User, FamilyRelation, RelationshipType, CreateFamilyRelationData } from '../types/family';
+import type { User, Guest, FamilyRelation, RelationshipType, CreateFamilyRelationData } from '../types/family';
 import { useUsers } from '../hooks/useUsers';
+import { userService } from '../services/userService';
 
 interface FamilyRelationsDialogProps {
   open: boolean;
@@ -55,17 +30,28 @@ const relationshipLabels: Record<RelationshipType, { label: string; icon: React.
   grandchild: { label: 'Petit-enfant de', icon: <ChildCare /> }
 };
 
+//type LinkablePerson = User & { is_guest?: boolean };
+type LinkablePerson = (User | (Guest & {
+  email: string;
+  is_guest: true;
+  is_active: false;
+  updated_at: string;
+}));
+
 export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
   open,
   onClose,
   userId,
   userName
 }) => {
+  console.log('[FamilyRelationsDialog] rendu');
   const [relations, setRelations] = useState<FamilyRelation[]>([]);
   const [loading, setLoading] = useState(false);
   const [addMode, setAddMode] = useState(false);
-  const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  //const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [searchResults, setSearchResults] = useState<LinkablePerson[]>([]);
+  //const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<LinkablePerson | null>(null);
   const [relationshipType, setRelationshipType] = useState<RelationshipType>('child');
   const [isGuardian, setIsGuardian] = useState(true);
 
@@ -89,15 +75,34 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
     }
   }, [open, loadRelations]);
 
-  const handleSearch = async (query: string) => {
-    if (query.length >= 2) {
-      const results = await searchUsers(query);
-      const existingIds = relations.map(r => r.related_user_id);
-      setSearchResults(results.filter(u => u.id !== userId && !existingIds.includes(u.id)));
-    } else {
-      setSearchResults([]);
-    }
-  };
+const handleSearch = async (query: string) => {
+  if (query.length >= 2) {
+    const results = await searchUsers(query);
+    const existingIds = relations.map(r => r.related_user_id);
+
+    const { data: guests } = await userService.getGuests();
+
+    const guestResults: LinkablePerson[] = (guests ?? [])
+      .filter(g => g.full_name.toLowerCase().includes(query.toLowerCase()))
+      .map(g => ({
+        ...g,
+        email: '',               // champ requis par User
+        is_guest: true,          // pour l'affichage
+        is_active: false,        // pour compatibilité
+        updated_at: g.created_at || '' // champ requis
+      }));
+
+
+    const merged = [...results, ...guestResults].filter(
+      u => u.id !== userId && !existingIds.includes(u.id)
+    );
+
+    setSearchResults(merged);
+  } else {
+    setSearchResults([]);
+  }
+};
+
 
   const handleAddRelation = async () => {
     if (!selectedUser) return;
@@ -182,7 +187,12 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
 
                 <Autocomplete
                   options={searchResults}
-                  getOptionLabel={(option) => `${option.full_name} (${option.email})`}
+                  //getOptionLabel={(option) => `${option.full_name} (${option.email})`}
+                  getOptionLabel={(option) =>
+                    'is_guest' in option
+                      ? `${option.full_name} (Invité)`
+                      : `${option.full_name} (${option.email})`
+                  }
                   value={selectedUser}
                   onChange={(_, value) => setSelectedUser(value)}
                   onInputChange={(_, value) => handleSearch(value)}

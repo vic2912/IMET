@@ -63,14 +63,10 @@ export function buildPresenceMap(bookings: Booking[]): Record<string, DailyPrese
 
           const presentDinner =
             (day > a && day < d) ||
-            (isArrivalDay && arrivalTime !== 'evening') ||
+            (isArrivalDay && arrivalTime !== 'evening' && !isDepartureDay) ||
             (isDepartureDay && departureTime === 'evening');
  
             const presentNuit = day >= a && day < d;
-
-            console.log(
-                `🛌 ${day} ${p.name} ${presentNuit} | arrival: ${a} | departure: ${d}`
-            );
 
 
           if (presentMorning) map[key].morning.push(p);

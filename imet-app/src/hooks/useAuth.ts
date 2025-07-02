@@ -12,13 +12,13 @@ export const useAuth = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('🔄 Initialisation du hook useAuth');
+    //console.log('🔄 Initialisation du hook useAuth');
     initAuth();
 
     // Écoute les changements de session Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`🪄 Auth event: ${event}`);
-      console.log('📦 Nouvelle session:', session);
+      //console.log(`🪄 Auth event: ${event}`);
+      //console.log('📦 Nouvelle session:', session);
       setSession(session);
 
       if (!session) {
@@ -30,7 +30,7 @@ export const useAuth = () => {
     });
 
     return () => {
-      console.log('🧹 Nettoyage de useAuth');
+      //console.log('🧹 Nettoyage de useAuth');
       subscription.unsubscribe();
     };
   }, []);
@@ -45,10 +45,10 @@ export const useAuth = () => {
       setSession(data.session);
 
       if (data.session) {
-        console.log('✅ Session existante trouvée, chargement du profil');
+        //console.log('✅ Session existante trouvée, chargement du profil');
         await checkCurrentUser();
       } else {
-        console.log('🕳️ Aucune session trouvée au chargement');
+        //console.log('🕳️ Aucune session trouvée au chargement');
         setUser(null);
       }
     } catch (err: any) {
@@ -61,7 +61,7 @@ export const useAuth = () => {
   const checkCurrentUser = async () => {
     try {
       const { data: userData } = await authService.getCurrentUser();
-      console.log('👤 Profil utilisateur chargé:', userData);
+      //console.log('👤 Profil utilisateur chargé:', userData);
       setUser(userData);
     } catch (err: any) {
       console.error('❌ Erreur checkCurrentUser:', err.message);
@@ -82,7 +82,7 @@ export const useAuth = () => {
         return { success: false, error };
       }
 
-      console.log('✅ Connexion réussie:', data);
+      //console.log('✅ Connexion réussie:', data);
       setUser(data);
       return { success: true, data };
     } catch (error: any) {
@@ -132,7 +132,7 @@ export const useAuth = () => {
         return { success: false, error };
       }
 
-      console.log('👋 Déconnexion réussie');
+      //console.log('👋 Déconnexion réussie');
       setUser(null);
       return { success: true };
     } catch (error: any) {
@@ -164,7 +164,7 @@ export const useAuth = () => {
         return { success: false, error };
       }
 
-      console.log('✅ Profil mis à jour');
+      //console.log('✅ Profil mis à jour');
       setUser(data);
       return { success: true, data };
     } catch (error: any) {

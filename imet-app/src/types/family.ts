@@ -14,6 +14,15 @@ export interface FamilyRelation {
   related_user?: User;
 }
 
+export interface Guest {
+  id: string;
+  full_name: string;
+  birth_date?: string;
+  phone?: string;
+  allergies?: string;
+  created_at?: string;
+}
+
 export type RelationshipType = 
   | 'parent'      // Parent de
   | 'child'       // Enfant de

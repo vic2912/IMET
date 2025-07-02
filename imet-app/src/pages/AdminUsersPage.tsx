@@ -4,17 +4,18 @@ import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom"; 
 import {
   Box, Button, CircularProgress, Dialog, DialogActions,
-  DialogContent, DialogTitle, IconButton, Paper, Stack,
+  DialogContent, DialogTitle, Paper, Stack,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Typography
 } from '@mui/material';
 import { Person, PersonAdd, AdminPanelSettings, Delete } from '@mui/icons-material';
 import { CreateUserDialog } from '../components/CreateUsersDialog';
-import type { User } from '../types/family';
+import type { User, Guest } from '../types/family';
 import { UserDetailsDialog } from '../components/UserDetailsDialog';
 import { useSnackbar } from 'notistack';
 import { userService } from '../services/userService';
 import { useUserList } from '../hooks/useUserList';
+import { CreateGuestDialog } from '../components/CreateGuestDialog';
 
 export const AdminUsersPage: React.FC = () => {
   const { data: users, isLoading, refetch } = useUserList();
@@ -23,6 +24,7 @@ export const AdminUsersPage: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
+  const [openCreateGuest, setOpenCreateGuest] = useState(false);
 
 
   const handleCreateUser = async (data: any) => {
@@ -32,6 +34,17 @@ export const AdminUsersPage: React.FC = () => {
       return false;
     }
     enqueueSnackbar('Utilisateur créé avec succès', { variant: 'success' });
+    refetch();
+    return true;
+  };
+
+  const handleCreateGuest = async (data: Omit<Guest, 'id' | 'created_at'>) => {
+    const result = await userService.createGuestProfile(data);
+    if (result.error) {
+      enqueueSnackbar('Erreur lors de la création du participant', { variant: 'error' });
+      return false;
+    }
+    enqueueSnackbar('Participant invité créé avec succès', { variant: 'success' });
     refetch();
     return true;
   };
@@ -63,6 +76,13 @@ export const AdminUsersPage: React.FC = () => {
         <Button startIcon={<PersonAdd />} onClick={() => navigate('/admin/create-user')} sx={{ mr: 2 }}>
           Créer un utilisateur
         </Button>
+        <Button
+          startIcon={<Person />}
+          onClick={() => setOpenCreateGuest(true)}
+          sx={{ mr: 2 }}
+          >
+            Ajouter un contact sans compte
+        </Button>
           <Button onClick={() => refetch()}>Actualiser</Button>
         </Box>
       </Box>
@@ -79,11 +99,11 @@ export const AdminUsersPage: React.FC = () => {
                 <TableCell>Profil</TableCell>
                 <TableCell>Statut</TableCell>
                 <TableCell>Allergies</TableCell>
-                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {users?.map((user) => (
+
                 <TableRow
                   key={user.id}
                   hover
@@ -102,14 +122,6 @@ export const AdminUsersPage: React.FC = () => {
                   </TableCell>
                   <TableCell>{getStatut(user)}</TableCell>
                   <TableCell>{user.allergies || "Aucune"}</TableCell>
-                  <TableCell>
-                    <IconButton color="error" onClick={(e) => {
-                      e.stopPropagation();
-                      setUserToDelete(user.id);
-                    }}>
-                      <Delete />
-                    </IconButton>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -141,6 +153,11 @@ export const AdminUsersPage: React.FC = () => {
         user={selectedUser}
         onClose={() => setSelectedUser(null)}
         onSave={handleSaveUser}
+      />
+      <CreateGuestDialog
+        open={openCreateGuest}
+        onClose={() => setOpenCreateGuest(false)}
+        onSubmit={handleCreateGuest}
       />
     </Box>
   );

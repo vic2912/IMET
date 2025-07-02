@@ -1,13 +1,10 @@
 import { supabase, executeQuery } from './supabase';
-import type {
-  User,
-  CreateUserData,
-  FamilyRelation,
-  CreateFamilyRelationData,
-  RelationshipType
+import { v4 as uuidv4 } from 'uuid';
+
+import type { User, CreateUserData, FamilyRelation, CreateFamilyRelationData, RelationshipType, Guest
 } from '../types/family';
 
-const toSupabaseError = (msg: string): { message: string } => ({ message: msg });
+
 
 export class UserService {
   async createUser(data: CreateUserData): Promise<{ data: User | null; error: string | null }> {
@@ -131,7 +128,40 @@ export class UserService {
     }) as Promise<{ data: FamilyRelation[] | null; error: { message: string } | null }>;
   }
 
+  async createGuestProfile(data: Omit<Guest, 'id' | 'created_at'>): Promise<{ data: Guest | null; error: string | null }> {
+    const guestId = uuidv4();
 
+    const { data: guest, error } = await supabase
+      .from('guests')
+      .insert([
+        {
+          id: guestId,
+          full_name: data.full_name,
+          birth_date: data.birth_date || null,
+          phone: data.phone || null,
+          allergies: data.allergies || null,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Erreur création guest :", error);
+      return { data: null, error: error.message };
+    }
+
+    return { data: guest as Guest, error: null };
+  }
+
+  async getGuests(): Promise<{ data: Guest[] | null; error: string | null }> {
+    return executeQuery(async () => {
+      const { data, error } = await supabase
+        .from('guests')
+        .select('*')
+        .order('full_name');
+      return { data, error };
+    });
+  }
 
   async getUserDependents(userId: string): Promise<{ data: User[] | null; error: string | null }> {
     return executeQuery(async () => {

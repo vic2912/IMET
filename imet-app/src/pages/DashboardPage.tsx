@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 
 // MUI
 import {
-  Box, Typography, Fab, Tooltip, Stack, Card, CardContent
+  Box, Typography, Fab, Tooltip, Stack, Card, CardContent, Button
 } from '@mui/material';
 import { Add as AddIcon, MonetizationOn } from '@mui/icons-material';
+import { useSnackbar } from 'notistack';
+
 
 // Librairies date
 import { isAfter, isBefore, isWithinInterval } from 'date-fns';
@@ -18,10 +20,12 @@ import { useBookings } from '../hooks/useBookings';
 import { BookingWizard } from '../components/BookingWizard';
 import { BookingCard } from '../components/BookingCard';
 import { EditBookingDialog } from '../components/EditBookingDialog';
+import { CreateGuestDialog } from '../components/CreateGuestDialog';
+import { userService } from '../services/userService';
 
 // Types
 import type { Booking } from '../types/booking';
-
+import type { Guest } from '../types/family';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -29,6 +33,18 @@ export const DashboardPage: React.FC = () => {
   const [showWizard, setShowWizard] = useState(false);
   const [bookingToEdit, setBookingToEdit] = useState<Booking | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [openGuestDialog, setOpenGuestDialog] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
+
+  const handleCreateGuest = async (data: Omit<Guest, 'id' | 'created_at'>) => {
+    const result = await userService.createGuestProfile(data);
+    if (result.error) {
+      enqueueSnackbar('Erreur lors de la création du participant', { variant: 'error' });
+      return false;
+    }
+    enqueueSnackbar('Invité ajouté avec succès', { variant: 'success' });
+    return true;
+  };
 
 
   const today = new Date();
@@ -106,28 +122,41 @@ export const DashboardPage: React.FC = () => {
           )}
         </Box>
 
-        {/* Colonne résumé financier */}
-        <Box sx={{ p: 2, border: '1px solid #ccc', borderRadius: 2, backgroundColor: '#f9f9f9', minWidth: 250, boxShadow: 2 }}>
-          <Typography variant="h6" gutterBottom>Résumé financier</Typography>
+        {/* Colonne droite : bouton + résumé financier */}
+        <Stack spacing={2} alignItems="stretch" minWidth={250}>
+          <Button 
+            variant="outlined" 
+            onClick={() => setOpenGuestDialog(true)}
+            fullWidth
+          >
+            Ajouter un Guest
+          </Button>
 
-          <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-            <MonetizationOn color="success" />
-            <Typography variant="body1">Total payé :</Typography>
-            <Typography variant="h6" color="green">{paid} €</Typography>
-          </Stack>
+          <Box sx={{ p: 2, border: '1px solid #ccc', borderRadius: 2, backgroundColor: '#f9f9f9', boxShadow: 2 }}>
+            <Typography variant="h6" gutterBottom>Résumé financier</Typography>
 
-          <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-            <MonetizationOn color="error" />
-            <Typography variant="body1">Total à payer :</Typography>
-            <Typography variant="h6" color="red">{due} €</Typography>
-          </Stack>
+            <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+              <MonetizationOn color="success" />
+              <Typography variant="body1">Total payé :</Typography>
+              <Typography variant="h6" color="green">{paid} €</Typography>
+            </Stack>
 
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <MonetizationOn color="primary" />
-            <Typography variant="body1">Total global :</Typography>
-            <Typography variant="h6" color="#1976d2">{total} €</Typography>
-          </Stack>
-        </Box>
+            <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+              <MonetizationOn color="error" />
+              <Typography variant="body1">Total à payer :</Typography>
+              <Typography variant="h6" color="red">{due} €</Typography>
+            </Stack>
+
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <MonetizationOn color="primary" />
+              <Typography variant="body1">Total global :</Typography>
+              <Typography variant="h6" color="#1976d2">{total} €</Typography>
+            </Stack>
+          </Box>
+        </Stack>
+
+
+
       </Stack>
 
       <Tooltip title="Nouveau séjour">
@@ -151,6 +180,12 @@ export const DashboardPage: React.FC = () => {
               setBookingToEdit(null);       // toujours reset après fermeture
             }}
           />
+
+          <CreateGuestDialog
+                  open={openGuestDialog}
+                  onClose={() => setOpenGuestDialog(false)}
+                  onSubmit={handleCreateGuest}
+                />
 
           {/* Édition des participants d’un séjour existant */}
           {bookingToEdit && showEditDialog && user && (
