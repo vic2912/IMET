@@ -134,5 +134,4 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-/imet-app/src/services/supabase.ts
-/imet-app/src/components/AdminCreateUserForm.tsx
+

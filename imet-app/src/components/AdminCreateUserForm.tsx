@@ -69,10 +69,10 @@ export default function AdminCreateUserForm() {
         throw new Error("Utilisateur non authentifié !");
       }
       //Ligne développement
-      const response = await fetch("https://dcydlyjmfhzhjtjtjcoo.supabase.co/functions/v1/create_user", {
+      //const response = await fetch("https://dcydlyjmfhzhjtjtjcoo.supabase.co/functions/v1/create_user", {
 
       //Ligne Production
-      //const response = await fetch("https://xwxlmrzemlrxtzowznfv.supabase.co/functions/v1/create_user", {
+      const response = await fetch("https://xwxlmrzemlrxtzowznfv.supabase.co/functions/v1/create_user", {
 
         method: "POST",
         headers: {
