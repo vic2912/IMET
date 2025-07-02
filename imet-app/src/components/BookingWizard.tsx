@@ -51,6 +51,9 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
   const [personDetails, setPersonDetails] = useState<PersonDetails[]>([]);
   const [hasGeneratedParticipants, setHasGeneratedParticipants] = useState(false);
   const [isEndDateOpen, setIsEndDateOpen] = useState(false);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState<ExtendedCreateBookingDataForServer | null>(null);
+
 
   const generateParticipants = () => {
     let participants: PersonDetails[] = [];
@@ -110,10 +113,6 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
 
   const handleSubmit = () => {
     if (!startDate || !endDate || !user?.id) return;
-    if (hasOverlappingBooking(startDate, endDate, user.id, bookings)) {
-      alert("Conflit : il existe déjà une réservation sur cette période.");
-      return;
-    }
 
     for (const person of personDetails) {
       if (!person.arrivalDate || !person.departureDate) {
@@ -144,6 +143,23 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
       status: 'pending'
     };
 
+    if (hasOverlappingBooking(startDate, endDate, user.id, bookings)) {
+      const bookingToConfirm: ExtendedCreateBookingDataForServer = {
+        start_date: format(startDate, 'yyyy-MM-dd'),
+        end_date: format(endDate, 'yyyy-MM-dd'),
+        arrival_time: startTime,
+        departure_time: endTime,
+        adults,
+        children,
+        booking_for_self: true,
+        persons_details: sanitizedPersonDetails,
+        status: 'pending'
+      };
+      setPendingBooking(bookingToConfirm);
+      setShowConflictDialog(true);
+      return;
+    }
+
     createBooking.mutate({ userId: user.id, data: booking }, {
       onSuccess: () => {
         enqueueSnackbar('Séjour créé', { variant: 'success' });
@@ -153,188 +169,218 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Créer un séjour</DialogTitle>
-      <DialogContent>
-        <Stepper activeStep={step} sx={{ my: 2 }}>
-          {steps.map(label => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
+     <>
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle>Créer un séjour</DialogTitle>
+        <DialogContent>
+          <Stepper activeStep={step} sx={{ my: 2 }}>
+            {steps.map(label => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
 
-        <Fade in={step === 0} timeout={500} unmountOnExit>
-          <Box>
-            <Stack spacing={2}>
-              <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
-                <DatePicker
-                  label="Date d'arrivée"
-                  format="dd/MM/yyyy"
-                  value={startDate}
-                  onChange={(newDate) => {
-                    setStartDate(newDate);
-                    setIsEndDateOpen(true);
-                  }}
-                  slotProps={{ textField: { fullWidth: true } }}
-                />
-                <DatePicker
-                  label="Date de départ"
-                  format="dd/MM/yyyy"
-                  value={endDate}
-                  onChange={(newDate) => {
-                    setEndDate(newDate);
-                    setIsEndDateOpen(false);
-                  }}
-                  open={isEndDateOpen}
-                  onOpen={() => setIsEndDateOpen(true)}
-                  onClose={() => setIsEndDateOpen(false)}
-                  referenceDate={startDate ?? undefined}
-                  minDate={startDate ?? undefined}
-                  slotProps={{ textField: { fullWidth: true } }}
-                />
+          <Fade in={step === 0} timeout={500} unmountOnExit>
+            <Box>
+              <Stack spacing={2}>
+                <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
+                  <DatePicker
+                    label="Date d'arrivée"
+                    format="dd/MM/yyyy"
+                    value={startDate}
+                    onChange={(newDate) => {
+                      setStartDate(newDate);
+                      setIsEndDateOpen(true);
+                    }}
+                    slotProps={{ textField: { fullWidth: true } }}
+                  />
+                  <DatePicker
+                    label="Date de départ"
+                    format="dd/MM/yyyy"
+                    value={endDate}
+                    onChange={(newDate) => {
+                      setEndDate(newDate);
+                      setIsEndDateOpen(false);
+                    }}
+                    open={isEndDateOpen}
+                    onOpen={() => setIsEndDateOpen(true)}
+                    onClose={() => setIsEndDateOpen(false)}
+                    referenceDate={startDate ?? undefined}
+                    minDate={startDate ?? undefined}
+                    slotProps={{ textField: { fullWidth: true } }}
+                  />
+                </Stack>
+
+                <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
+                  <TextField label="Adultes" type="number" fullWidth value={adults} onChange={e => setAdults(Number(e.target.value))} />
+                  <TextField label="Enfants" type="number" fullWidth value={children} onChange={e => setChildren(Number(e.target.value))} />
+                </Stack>
+
+                <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
+                  <TextField
+                    select
+                    label="Heure d'arrivée"
+                    fullWidth
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value as ArrivalTime)}
+                  >
+                    {timeOptions.map(t => <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>)}
+                  </TextField>
+
+                  <TextField
+                    select
+                    label="Heure de départ"
+                    fullWidth
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value as DepartureTime)}
+                  >
+                    {timeOptions.map(t => <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>)}
+                  </TextField>
+                </Stack>
               </Stack>
+            </Box>
+          </Fade>
 
-              <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
-                <TextField label="Adultes" type="number" fullWidth value={adults} onChange={e => setAdults(Number(e.target.value))} />
-                <TextField label="Enfants" type="number" fullWidth value={children} onChange={e => setChildren(Number(e.target.value))} />
+          <Fade in={step === 1} timeout={500} unmountOnExit>
+            <Box>
+              <Typography variant="h6" gutterBottom>Participants</Typography>
+              <Stack spacing={2}>
+                {personDetails.map((p, index) => (
+                  <Box key={`person-${index}`} sx={{ border: '1px solid #ccc', borderRadius: 2, p: 2 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+                      <Typography variant="subtitle1">Participant {index + 1}</Typography>
+                      <Chip label={index < adults ? 'Adulte' : 'Enfant'} color={index < adults ? 'primary' : 'success'} size="small" />
+                    </Stack>
+
+                    <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
+                      <Select
+                        fullWidth
+                        value={p.name}
+                        onChange={(e) => {
+                          const updated = [...personDetails];
+                          updated[index].name = e.target.value;
+
+                          const selectedName = e.target.value;
+                          if (index < adults) {
+                            const matchingAdult = closeFamily.find(f => f.full_name === selectedName && isAdult(f.birth_date));
+                            updated[index].person_type = matchingAdult ? 'adulte_famille' : 'adulte_amis';
+                          } else {
+                            const matchingChild = closeFamily.find(f => f.full_name === selectedName && !isAdult(f.birth_date));
+                            updated[index].person_type = matchingChild ? 'enfant_famille' : 'enfant_amis';
+                          }
+
+                          setPersonDetails(updated);
+                        }}
+                      >
+                        {(index < adults ? getAdultOptions() : getChildOptions()).map(option => (
+                          <MenuItem key={option.id} value={option.name}>{option.name}</MenuItem>
+                        ))}
+                      </Select>
+
+                      <DatePicker
+                        format="dd/MM/yyyy"
+                        value={p.arrivalDate}
+                        onChange={(newDate) => {
+                          const updated = [...personDetails];
+                          updated[index].arrivalDate = newDate ?? null;
+                          setPersonDetails(updated);
+                        }}
+                        slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+                      />
+
+                      <TextField
+                        select
+                        label="Heure arrivée"
+                        fullWidth
+                        value={p.arrivalTime}
+                        onChange={(e) => {
+                          const updated = [...personDetails];
+                          updated[index].arrivalTime = e.target.value as ArrivalTime;
+                          setPersonDetails(updated);
+                        }}
+                        size="small"
+                      >
+                        {timeOptions.map(t => <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>)}
+                      </TextField>
+
+                      <DatePicker
+                        format="dd/MM/yyyy"
+                        value={p.departureDate}
+                        onChange={(newDate) => {
+                          const updated = [...personDetails];
+                          updated[index].departureDate = newDate ?? null;
+                          setPersonDetails(updated);
+                        }}
+                        slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+                      />
+
+                      <TextField
+                        select
+                        label="Heure départ"
+                        fullWidth
+                        value={p.departureTime}
+                        onChange={(e) => {
+                          const updated = [...personDetails];
+                          updated[index].departureTime = e.target.value as DepartureTime;
+                          setPersonDetails(updated);
+                        }}
+                        size="small"
+                      >
+                        {timeOptions.map(t => <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>)}
+                      </TextField>
+                    </Stack>
+                  </Box>
+                ))}
               </Stack>
-
-              <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
-                <TextField
-                  select
-                  label="Heure d'arrivée"
-                  fullWidth
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value as ArrivalTime)}
-                >
-                  {timeOptions.map(t => <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>)}
-                </TextField>
-
-                <TextField
-                  select
-                  label="Heure de départ"
-                  fullWidth
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value as DepartureTime)}
-                >
-                  {timeOptions.map(t => <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>)}
-                </TextField>
-              </Stack>
-            </Stack>
-          </Box>
-        </Fade>
-
-        <Fade in={step === 1} timeout={500} unmountOnExit>
-          <Box>
-            <Typography variant="h6" gutterBottom>Participants</Typography>
-            <Stack spacing={2}>
-              {personDetails.map((p, index) => (
-                <Box key={`person-${index}`} sx={{ border: '1px solid #ccc', borderRadius: 2, p: 2 }}>
-                  <Stack direction="row" spacing={1} alignItems="center" mb={1}>
-                    <Typography variant="subtitle1">Participant {index + 1}</Typography>
-                    <Chip label={index < adults ? 'Adulte' : 'Enfant'} color={index < adults ? 'primary' : 'success'} size="small" />
-                  </Stack>
-
-                  <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
-                    <Select
-                      fullWidth
-                      value={p.name}
-                      onChange={(e) => {
-                        const updated = [...personDetails];
-                        updated[index].name = e.target.value;
-
-                        const selectedName = e.target.value;
-                        if (index < adults) {
-                          const matchingAdult = closeFamily.find(f => f.full_name === selectedName && isAdult(f.birth_date));
-                          updated[index].person_type = matchingAdult ? 'adulte_famille' : 'adulte_amis';
-                        } else {
-                          const matchingChild = closeFamily.find(f => f.full_name === selectedName && !isAdult(f.birth_date));
-                          updated[index].person_type = matchingChild ? 'enfant_famille' : 'enfant_amis';
-                        }
-
-                        setPersonDetails(updated);
-                      }}
-                    >
-                      {(index < adults ? getAdultOptions() : getChildOptions()).map(option => (
-                        <MenuItem key={option.id} value={option.name}>{option.name}</MenuItem>
-                      ))}
-                    </Select>
-
-                    <DatePicker
-                      format="dd/MM/yyyy"
-                      value={p.arrivalDate}
-                      onChange={(newDate) => {
-                        const updated = [...personDetails];
-                        updated[index].arrivalDate = newDate ?? null;
-                        setPersonDetails(updated);
-                      }}
-                      slotProps={{ textField: { fullWidth: true, size: 'small' } }}
-                    />
-
-                    <TextField
-                      select
-                      label="Heure arrivée"
-                      fullWidth
-                      value={p.arrivalTime}
-                      onChange={(e) => {
-                        const updated = [...personDetails];
-                        updated[index].arrivalTime = e.target.value as ArrivalTime;
-                        setPersonDetails(updated);
-                      }}
-                      size="small"
-                    >
-                      {timeOptions.map(t => <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>)}
-                    </TextField>
-
-                    <DatePicker
-                      format="dd/MM/yyyy"
-                      value={p.departureDate}
-                      onChange={(newDate) => {
-                        const updated = [...personDetails];
-                        updated[index].departureDate = newDate ?? null;
-                        setPersonDetails(updated);
-                      }}
-                      slotProps={{ textField: { fullWidth: true, size: 'small' } }}
-                    />
-
-                    <TextField
-                      select
-                      label="Heure départ"
-                      fullWidth
-                      value={p.departureTime}
-                      onChange={(e) => {
-                        const updated = [...personDetails];
-                        updated[index].departureTime = e.target.value as DepartureTime;
-                        setPersonDetails(updated);
-                      }}
-                      size="small"
-                    >
-                      {timeOptions.map(t => <MenuItem key={t} value={t}>{timeLabels[t]}</MenuItem>)}
-                    </TextField>
-                  </Stack>
-                </Box>
-              ))}
-            </Stack>
-          </Box>
-        </Fade>
-      </DialogContent>
-      <DialogActions>
-        {step > 0 && <Button onClick={() => setStep(step - 1)}>Retour</Button>}
-        {step < steps.length - 1 && (
-          <Button disabled={!startDate || !endDate} onClick={() => setStep(step + 1)}>Suivant</Button>
-        )}
-        {step === steps.length - 1 && (
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={createBooking.isPending}
-          >
-            Valider
+            </Box>
+          </Fade>
+        </DialogContent>
+        <DialogActions>
+          {step > 0 && <Button onClick={() => setStep(step - 1)}>Retour</Button>}
+          {step < steps.length - 1 && (
+            <Button disabled={!startDate || !endDate} onClick={() => setStep(step + 1)}>Suivant</Button>
+          )}
+          {step === steps.length - 1 && (
+            <Button
+              variant="contained"
+              onClick={handleSubmit}
+              disabled={createBooking.isPending}
+            >
+              Valider
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+    );
+        <Dialog open={showConflictDialog} onClose={() => setShowConflictDialog(false)}>
+        <DialogTitle>Conflit possible de dates</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Il semble qu'une autre réservation existe pour cette période. Voulez-vous vraiment continuer ?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setShowConflictDialog(false);
+            setPendingBooking(null);
+          }}>Non</Button>
+          <Button variant="contained" color="primary" onClick={() => {
+            if (pendingBooking) {
+              createBooking.mutate({ userId: user!.id, data: pendingBooking }, {
+                onSuccess: () => {
+                  enqueueSnackbar('Séjour créé', { variant: 'success' });
+                  onClose();
+                }
+              });
+            }
+            setShowConflictDialog(false);
+            setPendingBooking(null);
+          }}>
+            Oui
           </Button>
-        )}
-      </DialogActions>
-    </Dialog>
+        </DialogActions>
+      </Dialog>
+  </>
   );
-
 };

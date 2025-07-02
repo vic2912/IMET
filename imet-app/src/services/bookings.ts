@@ -49,10 +49,12 @@ export const bookingService = {
 
 async create(userId: string, bookingData: ExtendedCreateBookingDataForServer): Promise<Booking> {
 
+    /* On ne vérifie plus en back-end s'il y a un conflit. On ne vérifie qu'avec un message d'alerte en front
     const conflictCheck = await bookingService.checkDateConflict(userId, bookingData.start_date, bookingData.end_date);
     if (conflictCheck.hasConflict) {
       throw new Error(`Ces dates sont déjà réservées`);
     }
+    */
 
     const parsedPersons: PersonDetails[] = bookingData.persons_details.map(person => ({
       ...person,

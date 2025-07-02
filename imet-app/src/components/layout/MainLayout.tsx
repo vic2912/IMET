@@ -57,6 +57,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogoutSuccess })
   const renderDrawerMenu = () => (
     <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
       <Box sx={{ width: 250 }} role="presentation" onClick={() => setDrawerOpen(false)}>
+        <Box sx={{ p: 2 }}>
+          <Typography
+            variant="h6"
+            sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+            onClick={() => {
+              setProfileOpen(true);
+              setDrawerOpen(false);
+            }}
+          >
+            {user.full_name}
+          </Typography>
+        </Box>
         <List>
           {navItems.map(item => (
             <ListItemButton key={item.path} onClick={() => navigate(item.path)}>
@@ -72,6 +84,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogoutSuccess })
       </Box>
     </Drawer>
   );
+
 
   return (
     <Box>
