@@ -36,11 +36,17 @@ const mealColors = {
   dinner: '#f3e5f5'
 };
 
-const getBoxColor = (morningCount: number, nightCount: number) => {
+const getBoxColor = (morningCount: number, nightCount: number, maxCount: number) => {
   const colorMorning = morningCount > 13 ? '#ffcdd2' : morningCount > 0 ? '#c8e6c9' : '#ffffff';
   const colorEvening = nightCount > 13 ? '#ffcdd2' : nightCount > 0 ? '#c8e6c9' : '#ffffff';
-  
+  const colorDay = maxCount > 13 ? '#ffcdd2' : maxCount > 0 ? '#c8e6c9' : '#ffffff';
+
+  if (colorMorning === '#ffffff' && colorEvening === '#ffffff' && colorDay !== '#ffffff') {
+    return colorDay;
+  }
+
   if (colorMorning === colorEvening) return colorMorning;
+
   return `linear-gradient(120deg, ${colorMorning} 50%, ${colorEvening} 50%)`;  
 };
 
@@ -92,7 +98,7 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings }) =>
           border: '1px solid #ccc',
           p: 1,
           cursor: 'pointer',
-          background: getBoxColor(presence?.morning.length || 0, presence?.nuit.length || 0),
+          background: getBoxColor(presence?.morning.length || 0, presence?.nuit.length || 0, presence?.maxPeople || 0),
           boxShadow: isToday ? '0 0 0 2px #2196f3 inset' : undefined,
           borderRadius: 1
         }}
