@@ -65,13 +65,14 @@ const App: React.FC = () => {
         <SnackbarProvider maxSnack={3} autoHideDuration={4000}>
           <Router>
             <Routes>
-              {!isAuthenticated ? (
-                <>
-                  <Route path="/*" element={<AuthPage />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                </>
-              ) : (
+
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                {!isAuthenticated ? (
+                  <>
+                    <Route path="/*" element={<AuthPage />} />
+                  </>
+                ) : (
                 <Route element={<MainLayout user={user!} onLogoutSuccess={showSuccess} />}>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
