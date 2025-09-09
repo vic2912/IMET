@@ -34,6 +34,7 @@ interface ActionRow {
   sections: SectionKey[];
   comment: string | null;
   is_active: boolean | null;
+  sort_order?: number | null;
 }
 
 interface UiActionItem {
@@ -96,11 +97,18 @@ export default function CareChecklistsPage() {
   const season = detectSeason();
   const sectionKey = sectionKeyFor(moment, season);
 
+  const showBoth = !sp.get('moment'); // si ouvert depuis le menu
+  const sectionKeyIn  = sectionKeyFor('arrival', season);
+  const sectionKeyOut = sectionKeyFor('departure', season);
+
   // ---------- Checklist (partie haute) ----------
   const [ckLoading, setCkLoading] = React.useState(true);
   const [ckError, setCkError] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<UiActionItem[]>([]);
-
+  
+  const [itemsIn, setItemsIn] = React.useState<UiActionItem[]>([]);
+  const [itemsOut, setItemsOut] = React.useState<UiActionItem[]>([]);
+  
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -109,33 +117,66 @@ export default function CareChecklistsPage() {
       try {
         const { data, error } = await supabase
           .from('checklist_actions')
-          .select('id,label,sections,comment,is_active')
-          .eq('is_active', true)
-          .order('label', { ascending: true });
+          .select('id,label,sections,comment,is_active') // si vous avez ajouté sort_order, vous pouvez l’inclure ici
+          .eq('is_active', true);
         if (error) throw error;
 
         const rows = (data ?? []) as ActionRow[];
-        const filtered = rows.filter(r => (r.sections || []).includes(sectionKey));
-        const mapped: UiActionItem[] = filtered.map((r) => ({
-          id: r.id,
-          label: r.label,
-          comment: r.comment ?? null,
-          done: false,
-        }));
 
-        if (!cancelled) setItems(mapped);
+        if (showBoth) {
+          const filteredIn  = rows.filter(r => (r.sections || []).includes(sectionKeyIn));
+          const filteredOut = rows.filter(r => (r.sections || []).includes(sectionKeyOut));
+
+          const mappedIn: UiActionItem[] = filteredIn.map(r => ({
+            id: r.id, label: r.label, comment: r.comment ?? null, done: false,
+          }));
+          const mappedOut: UiActionItem[] = filteredOut.map(r => ({
+            id: r.id, label: r.label, comment: r.comment ?? null, done: false,
+          }));
+
+          if (!cancelled) {
+            setItemsIn(mappedIn);
+            setItemsOut(mappedOut);
+            setItems([]); // on n’utilise pas la liste “simple” en mode double
+          }
+        } else {
+          const filtered = rows.filter(r => (r.sections || []).includes(sectionKey));
+          const mapped: UiActionItem[] = filtered.map((r) => ({
+            id: r.id,
+            label: r.label,
+            comment: r.comment ?? null,
+            done: false,
+          }));
+          if (!cancelled) setItems(mapped);
+        }
       } catch (e: any) {
         console.error(e);
         if (!cancelled) {
           setCkError(e?.message || 'Erreur de chargement.');
           setItems([]);
+          setItemsIn([]);
+          setItemsOut([]);
         }
       } finally {
         if (!cancelled) setCkLoading(false);
       }
     })();
+    // 👉 dépend maintenant de showBoth et des deux clés de section
     return () => { cancelled = true; };
-  }, [sectionKey]);
+  }, [showBoth, sectionKey, sectionKeyIn, sectionKeyOut, supabase]);
+
+  const ckPercentIn =
+    itemsIn.length > 0 ? Math.round((itemsIn.filter(i => i.done).length / itemsIn.length) * 100) : 0;
+  const ckPercentOut =
+    itemsOut.length > 0 ? Math.round((itemsOut.filter(i => i.done).length / itemsOut.length) * 100) : 0;
+
+  // Toggles
+  const toggleIn = (id: string) => {
+    setItemsIn(arr => arr.map(it => it.id === id ? { ...it, done: !it.done } : it));
+  };
+  const toggleOut = (id: string) => {
+    setItemsOut(arr => arr.map(it => it.id === id ? { ...it, done: !it.done } : it));
+  };
 
   const ckPercent =
     items.length > 0
@@ -147,7 +188,7 @@ export default function CareChecklistsPage() {
   };
 
   // ---------- Inventaire (bas de page, seulement en check-out) ----------
-  const showInventory = moment === 'departure';
+  const showInventory = !showBoth && moment === 'departure';
 
   const [invLoading, setInvLoading] = React.useState(true);
   const [invError, setInvError] = React.useState<string | null>(null);
@@ -290,55 +331,178 @@ const invHeaderRight =
   return (
     <Container maxWidth="sm" sx={{ py: 2 }}>
       {/* En-tête compact, pensé mobile */}
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {SECTION_LABEL[sectionKey]}
-      </Typography>
+      {showBoth ? (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {SECTION_LABEL[sectionKeyIn]} &nbsp;•&nbsp; {SECTION_LABEL[sectionKeyOut]}
+        </Typography>
+      ) : (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {SECTION_LABEL[sectionKey]}
+        </Typography>
+      )}
 
       {ckError && <Alert severity="error" sx={{ mb: 2 }}>{ckError}</Alert>}
 
       {/* Bloc checklist */}
-      <Card>
-        <CardHeader
-          subheader={
-            items.length > 0 ? `Progression: ${items.filter(i => i.done).length}/${items.length} (${ckPercent}%)` : undefined
-          }
-        />
-        {ckLoading ? <LinearProgress /> : (ckPercent > 0 ? <LinearProgress variant="determinate" value={ckPercent} /> : null)}
-        <CardContent>
-          {ckLoading ? (
-            <Typography color="text.secondary">Chargement…</Typography>
-          ) : items.length === 0 ? (
-            <Typography color="text.secondary">
-              Aucune action pour <b>{SECTION_LABEL[sectionKey]}</b>. Ajoutez des actions dans <code>Admin &gt; Checklists</code>.
-            </Typography>
-          ) : (
-            <List disablePadding>
-              {items.map((it) => (
-                <ListItem
-                  key={it.id}
-                  disableGutters
-                  sx={{
-                    display: 'flex',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    alignItems: { xs: 'stretch', sm: 'center' },
-                    gap: 1.5,
-                    borderBottom: '1px solid #eee',
-                    py: 1,
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                    <Checkbox checked={it.done} onChange={() => toggle(it.id)} />
-                    <ListItemText
-                      primary={<span>{it.label}</span>}
-                      secondary={it.comment ? <span style={{ color: 'var(--mui-palette-text-secondary)' }}>{it.comment}</span> : undefined}
-                    />
-                  </Box>
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </CardContent>
-      </Card>
+      {!showBoth && (
+        <Card>
+          <CardHeader
+            subheader={
+              items.length > 0 ? `Progression: ${items.filter(i => i.done).length}/${items.length} (${ckPercent}%)` : undefined
+            }
+          />
+          {ckLoading ? <LinearProgress /> : (ckPercent > 0 ? <LinearProgress variant="determinate" value={ckPercent} /> : null)}
+          <CardContent>
+            {ckLoading ? (
+              <Typography color="text.secondary">Chargement…</Typography>
+            ) : items.length === 0 ? (
+              <Typography color="text.secondary">
+                Aucune action pour <b>{SECTION_LABEL[sectionKey]}</b>. Ajoutez des actions dans <code>Admin &gt; Checklists</code>.
+              </Typography>
+            ) : (
+              <List disablePadding>
+                {items.map((it) => (
+                  <ListItem
+                    key={it.id}
+                    disableGutters
+                    sx={{
+                      display: 'flex',
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      alignItems: { xs: 'stretch', sm: 'center' },
+                      gap: 1.5,
+                      borderBottom: '1px solid #eee',
+                      py: 1,
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                      <Checkbox checked={it.done} onChange={() => toggle(it.id)} />
+                      <ListItemText
+                        primary={<span>{it.label}</span>}
+                        secondary={it.comment ? <span style={{ color: 'var(--mui-palette-text-secondary)' }}>{it.comment}</span> : undefined}
+                      />
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Mode double : Check-in + Check-out de la saison courante */}
+      {showBoth && (
+        <Stack spacing={2}>
+          {/* Carte Check-in (saison courante) */}
+          <Card>
+            <CardHeader
+              title={SECTION_LABEL[sectionKeyIn]}
+              subheader={
+                itemsIn.length > 0
+                  ? `Progression: ${itemsIn.filter(i => i.done).length}/${itemsIn.length} (${ckPercentIn}%)`
+                  : undefined
+              }
+            />
+            {ckLoading ? (
+              <LinearProgress />
+            ) : ckPercentIn > 0 ? (
+              <LinearProgress variant="determinate" value={ckPercentIn} />
+            ) : null}
+            <CardContent>
+              {ckLoading ? (
+                <Typography color="text.secondary">Chargement…</Typography>
+              ) : itemsIn.length === 0 ? (
+                <Typography color="text.secondary">
+                  Aucune action pour <b>{SECTION_LABEL[sectionKeyIn]}</b>. Ajoutez des actions dans <code>Admin &gt; Checklists</code>.
+                </Typography>
+              ) : (
+                <List disablePadding>
+                  {itemsIn.map((it) => (
+                    <ListItem
+                      key={it.id}
+                      disableGutters
+                      sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        alignItems: { xs: 'stretch', sm: 'center' },
+                        gap: 1.5,
+                        borderBottom: '1px solid #eee',
+                        py: 1,
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                        <Checkbox checked={it.done} onChange={() => toggleIn(it.id)} />
+                        <ListItemText
+                          primary={<span>{it.label}</span>}
+                          secondary={
+                            it.comment ? (
+                              <span style={{ color: 'var(--mui-palette-text-secondary)' }}>{it.comment}</span>
+                            ) : undefined
+                          }
+                        />
+                      </Box>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Carte Check-out (saison courante) */}
+          <Card>
+            <CardHeader
+              title={SECTION_LABEL[sectionKeyOut]}
+              subheader={
+                itemsOut.length > 0
+                  ? `Progression: ${itemsOut.filter(i => i.done).length}/${itemsOut.length} (${ckPercentOut}%)`
+                  : undefined
+              }
+            />
+            {ckLoading ? (
+              <LinearProgress />
+            ) : ckPercentOut > 0 ? (
+              <LinearProgress variant="determinate" value={ckPercentOut} />
+            ) : null}
+            <CardContent>
+              {ckLoading ? (
+                <Typography color="text.secondary">Chargement…</Typography>
+              ) : itemsOut.length === 0 ? (
+                <Typography color="text.secondary">
+                  Aucune action pour <b>{SECTION_LABEL[sectionKeyOut]}</b>. Ajoutez des actions dans <code>Admin &gt; Checklists</code>.
+                </Typography>
+              ) : (
+                <List disablePadding>
+                  {itemsOut.map((it) => (
+                    <ListItem
+                      key={it.id}
+                      disableGutters
+                      sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        alignItems: { xs: 'stretch', sm: 'center' },
+                        gap: 1.5,
+                        borderBottom: '1px solid #eee',
+                        py: 1,
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                        <Checkbox checked={it.done} onChange={() => toggleOut(it.id)} />
+                        <ListItemText
+                          primary={<span>{it.label}</span>}
+                          secondary={
+                            it.comment ? (
+                              <span style={{ color: 'var(--mui-palette-text-secondary)' }}>{it.comment}</span>
+                            ) : undefined
+                          }
+                        />
+                      </Box>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </CardContent>
+          </Card>
+        </Stack>
+      )}
 
       {/* Bloc inventaire (uniquement en check-out) */}
       {showInventory && (

@@ -29,6 +29,7 @@ interface ActionRow {
   is_active: boolean | null;
   created_at?: string | null;
   updated_at?: string | null;
+  sort_order?: number | null;
 }
 
 type EditorMode = 'create' | 'edit';
@@ -51,6 +52,7 @@ export default function AdminChecklistsPage() {
     sections: [],
     comment: '',
     is_active: true,
+    sort_order: null,
   });
 
   const load = React.useCallback(async () => {
@@ -59,7 +61,8 @@ export default function AdminChecklistsPage() {
     try {
       const { data, error } = await supabase
         .from('checklist_actions')
-        .select('id,label,sections,comment,is_active,created_at,updated_at')
+        .select('id,label,sections,comment,is_active,created_at,updated_at,sort_order')
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('updated_at', { ascending: false });
       if (error) throw error;
       setRows((data ?? []) as ActionRow[]);
@@ -77,7 +80,7 @@ export default function AdminChecklistsPage() {
   function openCreate() {
     setEditorMode('create');
     setEditingId(null);
-    setDraft({ label: '', sections: [], comment: '', is_active: true });
+    setDraft({ label: '', sections: [], comment: '', is_active: true, sort_order: null });
     setEditorOpen(true);
   }
 
@@ -89,6 +92,7 @@ export default function AdminChecklistsPage() {
       sections: (row.sections || []) as SectionKey[],
       comment: row.comment ?? '',
       is_active: !!row.is_active,
+      sort_order: row.sort_order ?? null,
     });
     setEditorOpen(true);
   }
@@ -109,6 +113,9 @@ export default function AdminChecklistsPage() {
         sections: draft.sections,
         comment: draft.comment?.trim() || null,
         is_active: !!draft.is_active,
+        sort_order: draft.sort_order === null || draft.sort_order === undefined
+          ? null
+          : Number(draft.sort_order),
       };
 
       if (editorMode === 'create') {
@@ -175,6 +182,21 @@ export default function AdminChecklistsPage() {
               <Typography variant="subtitle1" fontWeight={600} sx={{ flex: 1 }}>
                 {r.label}
               </Typography>
+              <TextField
+                label="Ordre (optionnel)"
+                type="number"
+                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                placeholder="ex: 10, 20, 30…"
+                value={draft.sort_order ?? ''}
+                onChange={(e) =>
+                  setDraft(d => ({
+                    ...d,
+                    sort_order: e.target.value === '' ? null : Number(e.target.value),
+                  }))
+                }
+                fullWidth
+              />
+
               <FormControlLabel
                 sx={{ m: 0 }}
                 control={<Switch checked={!!r.is_active} onChange={() => toggleActive(r)} />}
@@ -188,6 +210,16 @@ export default function AdminChecklistsPage() {
               <Typography variant="caption" color="text.secondary" sx={{ minWidth: 86, pt: '2px' }}>
                 Sections
               </Typography>
+              <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mt: 0.75 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ minWidth: 86, pt: '2px' }}>
+                  Ordre
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {r.sort_order ?? '—'}
+                </Typography>
+              </Stack>
+
+
               <Stack direction="row" gap={0.5} flexWrap="wrap">
                 {(r.sections || []).map((s) => (
                   <Chip key={s} size="small" label={SECTION_LABEL[s]} />
@@ -238,6 +270,7 @@ export default function AdminChecklistsPage() {
                 <TableCell>Action</TableCell>
                 <TableCell>Sections</TableCell>
                 <TableCell>Commentaire</TableCell>
+                <TableCell align="right">Ordre</TableCell>
                 <TableCell align="right">Actif</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
@@ -258,6 +291,32 @@ export default function AdminChecklistsPage() {
                   <TableCell sx={{ color: 'text.secondary' }}>
                     {r.comment || '—'}
                   </TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    {r.sort_order ?? '—'}
+                    <Stack direction="row" spacing={0.5} justifyContent="flex-end" component="span" sx={{ ml: 1 }}>
+                      <IconButton
+                        size="small"
+                        onClick={async () => {
+                          const next = (r.sort_order ?? 0) - 1;
+                          await supabase.from('checklist_actions').update({ sort_order: next }).eq('id', r.id);
+                          await load();
+                        }}
+                      >
+                        ▲
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={async () => {
+                          const next = (r.sort_order ?? 0) + 1;
+                          await supabase.from('checklist_actions').update({ sort_order: next }).eq('id', r.id);
+                          await load();
+                        }}
+                      >
+                        ▼
+                      </IconButton>
+                    </Stack>
+                  </TableCell>
+
                   <TableCell align="right">
                     <FormControlLabel
                       control={<Switch checked={!!r.is_active} onChange={() => toggleActive(r)} />}

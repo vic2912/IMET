@@ -54,7 +54,7 @@ export default function ResetPassword() {
       setStatus("done");
 
       // Option : rediriger vers /login après 1–2 secondes
-      setTimeout(() => navigate("/login"), 1200);
+      setTimeout(() => navigate("/dashboard"), 1200);
     } catch (err: any) {
       setStatus("error");
       setErrorMsg(err.message ?? "Impossible de mettre à jour le mot de passe.");

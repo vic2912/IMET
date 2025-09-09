@@ -208,8 +208,10 @@ export const AllBookingsPage: React.FC = () => {
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Quelle liste afficher ?
-  const visible = useMemo(() => (view === 'mine' ? myBookings : allBookings), [view, myBookings, allBookings]);
-
+  const visible = useMemo(() => {
+    const list = view === 'mine' ? myBookings : allBookings;
+    return list.filter(b => b.status !== 'cancelled');
+  }, [view, myBookings, allBookings]);
   // Tri chronologique strict (du plus ancien au plus récent)
   const sorted = useMemo(() => {
     const safeTime = (d: string) => {
@@ -401,23 +403,28 @@ export const AllBookingsPage: React.FC = () => {
   return (
     <Box p={2}>
       {/* Sticky toggle */}
-      <Box
-        sx={{
-          position: 'sticky', top: 0, zIndex: 5, bgcolor: 'background.paper',
-          pb: 1.5, pt: 1, mb: 2, borderBottom: theme => `1px solid ${theme.palette.divider}`
-        }}
-      >
-        <Typography variant="h5" gutterBottom>Vue des séjours</Typography>
-        <ToggleButtonGroup
-          exclusive value={view}
-          onChange={(_, v) => { if (v) setView(v); }}
-          size="small"
-          sx={{ mt: 0.5 }}
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 5,
+            right: 5,
+            zIndex: 1300, // au-dessus du contenu principal
+            bgcolor: 'background.paper',
+            borderRadius: 2,
+            boxShadow: 3,
+            p: 1,
+          }}
         >
-          <ToggleButton value="mine">Mes séjours</ToggleButton>
-          <ToggleButton value="all">Tous les séjours</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
+          <ToggleButtonGroup
+            exclusive
+            value={view}
+            onChange={(_, v) => { if (v) setView(v); }}
+            size="small"
+          >
+            <ToggleButton value="mine">Mes séjours</ToggleButton>
+            <ToggleButton value="all">Tous les séjours</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
 
       {isLoading ? (
         <Box p={2} display="flex" alignItems="center" gap={2}>

@@ -23,69 +23,73 @@ export default function AdminDashboardPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const { userStats, paymentStats } = useMemo(() => {
-    const userStats: Record<string, {
-      name: string; stays: number;
-      nights: number; uniqueNights: Set<string>;
-      days: number; uniqueDays: Set<string>;
-      total: number; paid: number;
-    }> = {};
+  const userStats: Record<string, {
+    name: string; stays: number;
+    nights: number; uniqueNights: Set<string>;
+    days: number; uniqueDays: Set<string>;
+    total: number; paid: number;
+  }> = {};
 
-    let totalPaid = 0, totalUnpaid = 0, totalLate = 0;
+  let totalPaid = 0, totalUnpaid = 0, totalLate = 0;
 
-    bookings.forEach(booking => {
-      const yearOfBooking = parseISO(booking.start_date).getFullYear();
-      if (yearOfBooking !== year) return;
+  // ⬇️ Filtre: on exclut les séjours annulés
+  const filtered = (bookings ?? []).filter(b => b.status !== 'cancelled');
 
-      const userId = booking.user_id;
-      const name = booking.profiles?.full_name || 'Inconnu';
-      const people = booking.persons_details || [];
+  filtered.forEach(booking => {
+    const yearOfBooking = parseISO(booking.start_date).getFullYear();
+    if (yearOfBooking !== year) return;
 
-      let totalNights = 0;
-      let totalDays = 0;
+    const userId = booking.user_id;
+    const name = booking.profiles?.full_name || 'Inconnu';
+    const people = booking.persons_details || [];
 
-      if (!userStats[userId]) {
-        userStats[userId] = {
-          name, stays: 0,
-          nights: 0, uniqueNights: new Set(),
-          days: 0, uniqueDays: new Set(),
-          total: 0, paid: 0,
-        };
-      }
+    let totalNights = 0;
+    let totalDays = 0;
 
-      people.forEach(person => {
-        if (!person.arrivalDate || !person.departureDate) return;
-        const arrival = new Date(person.arrivalDate);
-        const departure = new Date(person.departureDate);
-        const { nights, days } = calculateNightsAndDays(
-          arrival, departure, person.arrivalTime, person.departureTime
-        );
-        totalNights += nights;
-        totalDays += days;
+    if (!userStats[userId]) {
+      userStats[userId] = {
+        name, stays: 0,
+        nights: 0, uniqueNights: new Set(),
+        days: 0, uniqueDays: new Set(),
+        total: 0, paid: 0,
+      };
+    }
 
-        getPresenceDayList(
-          person.arrivalDate, person.arrivalTime, person.departureDate, person.departureTime
-        ).forEach(d => userStats[userId].uniqueDays.add(d));
+    people.forEach(person => {
+      if (!person.arrivalDate || !person.departureDate) return;
+      const arrival = new Date(person.arrivalDate);
+      const departure = new Date(person.departureDate);
+      const { nights, days } = calculateNightsAndDays(
+        arrival, departure, person.arrivalTime, person.departureTime
+      );
+      totalNights += nights;
+      totalDays += days;
 
-        getUniqueNightList(person.arrivalDate, person.departureDate)
-          .forEach(d => userStats[userId].uniqueNights.add(d));
-      });
+      getPresenceDayList(
+        person.arrivalDate, person.arrivalTime, person.departureDate, person.departureTime
+      ).forEach(d => userStats[userId].uniqueDays.add(d));
 
-      userStats[userId].stays++;
-      userStats[userId].nights += totalNights;
-      userStats[userId].days += totalDays;
-
-      userStats[userId].total += booking.total_cost || 0;
-      if (booking.status === 'paid') {
-        userStats[userId].paid += booking.total_cost || 0;
-        totalPaid += booking.total_cost || 0;
-      } else if (booking.status === 'pending') {
-        if (new Date(booking.end_date) < new Date()) totalLate += booking.total_cost || 0;
-        else totalUnpaid += booking.total_cost || 0;
-      }
+      getUniqueNightList(person.arrivalDate, person.departureDate)
+        .forEach(d => userStats[userId].uniqueNights.add(d));
     });
 
-    return { userStats, paymentStats: { paid: totalPaid, unpaid: totalUnpaid, late: totalLate } };
-  }, [bookings, year]);
+    userStats[userId].stays++;
+    userStats[userId].nights += totalNights;
+    userStats[userId].days += totalDays;
+
+    userStats[userId].total += booking.total_cost || 0;
+
+    if (booking.status === 'paid') {
+      userStats[userId].paid += booking.total_cost || 0;
+      totalPaid += booking.total_cost || 0;
+    } else if (booking.status === 'pending') {
+      if (new Date(booking.end_date) < new Date()) totalLate += booking.total_cost || 0;
+      else totalUnpaid += booking.total_cost || 0;
+    }
+  });
+
+  return { userStats, paymentStats: { paid: totalPaid, unpaid: totalUnpaid, late: totalLate } };
+}, [bookings, year]);
 
   const pieData = [
     { name: 'Payé', value: paymentStats.paid },
