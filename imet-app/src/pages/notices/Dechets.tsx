@@ -62,6 +62,7 @@ export default function Dechets() {
         </ul>
 
         <div className="callout">
+          Pour l'instant, Gilles s'en occupe. Mais pensez y s'il est absent. 
           Présentez les bacs la veille au soir. 
         </div>
 
