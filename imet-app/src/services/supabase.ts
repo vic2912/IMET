@@ -2,9 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Configuration Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
+//const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+//const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 //Pour le développement  
 //const supabaseUrl = 'https://dcydlyjmfhzhjtjtjcoo.supabase.co';
 //const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjeWRseWptZmh6aGp0anRqY29vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTEyMTU4MSwiZXhwIjoyMDY0Njk3NTgxfQ.ZNNSgd9wRjjTO0Z04By5rI6meKrBjYLoet37bAFiZBI';
