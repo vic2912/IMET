@@ -24,6 +24,8 @@ import TribesPage from './pages/TribesPage';
 import CareChecklistsPage from './pages/CareCheckListsPage';
 import CareInventoryPage from './pages/CareInventoryPage';
 import { NOTICES } from './pages/notices/autoNotices';
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // import { AdminEventsPage } from './pages/AdminEventsPage';
 import AdminPricingPage from './pages/AdminPricingPage';
@@ -64,7 +66,11 @@ const App: React.FC = () => {
           <Router>
             <Routes>
               {!isAuthenticated ? (
-                <Route path="/*" element={<AuthPage />} />
+                <>
+                  <Route path="/*" element={<AuthPage />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                </>
               ) : (
                 <Route element={<MainLayout user={user!} onLogoutSuccess={showSuccess} />}>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -26,7 +26,6 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 
 // Simple log de démarrage
 console.log('📦 Client Supabase initialisé');
-console.log('URL', process.env.NEXT_PUBLIC_SUPABASE_URL)
 
 // Types pour les réponses Supabase
 export interface SupabaseError {

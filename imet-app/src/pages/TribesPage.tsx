@@ -38,11 +38,11 @@ const TribesPage: React.FC = () => {
   useEffect(() => {
     // debug léger
     // eslint-disable-next-line no-console
-    console.groupCollapsed('👪 [MaTribu] mount');
+    //console.groupCollapsed('👪 [MaTribu] mount');
     // eslint-disable-next-line no-console
-    console.log('auth user:', user?.id, user?.full_name);
+    //console.log('auth user:', user?.id, user?.full_name);
     // eslint-disable-next-line no-console
-    console.groupEnd();
+    //console.groupEnd();
   }, [user]);
 
   if (loading) return null;
