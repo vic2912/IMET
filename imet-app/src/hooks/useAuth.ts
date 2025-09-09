@@ -193,5 +193,6 @@ export const useAuth = () => {
     clearError,
     isAdmin: user?.is_admin || false,
     userId: user?.id || null,
+    setUser,
   };
 };

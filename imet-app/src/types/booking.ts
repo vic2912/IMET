@@ -27,6 +27,9 @@ export interface ExtendedCreateBookingData {
   persons_details: PersonDetails[];
   comments?: string;
   status: SejourStatus;
+  base_total_cost?: number;   // prix de base (sans remise)
+  discount_rate?: number;     // 0..1  (ex: 0.25 = -25%)
+  discount_reason?: string;
 }
 
 export interface Booking {
@@ -39,6 +42,9 @@ export interface Booking {
   adults: number;
   children: number;
   total_cost: number;
+  base_total_cost?: number;   // peut être null/absent sur anciens enregistrements
+  discount_rate?: number;     // 0..1
+  discount_reason?: string;
   status: SejourStatus;
   booking_for_self: boolean;
   booking_for_name?: string;
@@ -72,8 +78,11 @@ export interface UpdateBookingData {
   comments?: string;
   check_in_completed?: boolean;
   check_out_completed?: boolean;
+  base_total_cost?: number;
+  discount_rate?: number;     // 0..1
+  discount_reason?: string;
   total_cost?: number;
-  persons_details?: PersonDetails[];
+  persons_details?: PersonDetailsForServer[];
 }
 
 export interface BookingFormData {

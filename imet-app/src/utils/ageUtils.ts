@@ -1,3 +1,4 @@
+// src/utils/ageUtils.ts
 export function isAdult(birthDate?: string): boolean {
   if (!birthDate) return true; // pas de date => adulte par défaut
 

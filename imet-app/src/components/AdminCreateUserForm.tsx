@@ -1,18 +1,32 @@
+// src/components/AdminCreateUserForm.tsx
+
 import React, { useState } from "react";
 import type { SelectChangeEvent } from "@mui/material";
 import {
   Box, Button, Checkbox, FormControl, FormControlLabel,
   InputLabel, MenuItem, Select, Stack, TextField, Typography, Alert
 } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { format } from "date-fns";
 import { supabase } from "../services/supabase";
 
+type FormState = {
+  email: string;
+  password: string;
+  full_name: string;
+  phone: string;
+  birth_date: Date | null;       // ← on stocke un Date (ou null)
+  role: "user" | "admin";
+  is_active: boolean;
+};
+
 export default function AdminCreateUserForm() {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     email: "",
     password: "",
     full_name: "",
     phone: "",
-    birth_date: "",
+    birth_date: null,            // ← null au départ
     role: "user",
     is_active: true,
   });
@@ -33,7 +47,7 @@ export default function AdminCreateUserForm() {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: value,
+      [name as keyof FormState]: value as any,
     }));
   };
 
@@ -64,29 +78,28 @@ export default function AdminCreateUserForm() {
 
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
+      if (!token) throw new Error("Utilisateur non authentifié !");
 
-      if (!token) {
-        throw new Error("Utilisateur non authentifié !");
-      }
-      //Ligne développement
-      //const response = await fetch("https://dcydlyjmfhzhjtjtjcoo.supabase.co/functions/v1/create_user", {
+      // On sérialise la date en yyyy-MM-dd pour l'API
+      const payload = {
+        ...form,
+        birth_date: form.birth_date ? format(form.birth_date, "yyyy-MM-dd") : undefined,
+      };
 
-      //Ligne Production
-      const response = await fetch("https://xwxlmrzemlrxtzowznfv.supabase.co/functions/v1/create_user", {
-
+      // Ligne développement
+      const response = await fetch("https://dcydlyjmfhzhjtjtjcoo.supabase.co/functions/v1/create_user", {
+        // Ligne Production
+        // const response = await fetch("https://xwxlmrzemlrxtzowznfv.supabase.co/functions/v1/create_user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Erreur inconnue");
-      }
+      if (!response.ok) throw new Error(result.error || "Erreur inconnue");
 
       setMessage(`✅ Utilisateur créé : ${result.user.full_name}`);
       setForm({
@@ -94,7 +107,7 @@ export default function AdminCreateUserForm() {
         password: "",
         full_name: "",
         phone: "",
-        birth_date: "",
+        birth_date: null,  // ← on reset à null
         role: "user",
         is_active: true,
       });
@@ -148,15 +161,22 @@ export default function AdminCreateUserForm() {
           fullWidth
         />
 
-        <TextField
+        {/* DatePicker avec sélection directe de l'année */}
+        <DatePicker
           label="Date de naissance"
-          name="birth_date"
-          type="date"
           value={form.birth_date}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          required
-          fullWidth
+          onChange={(newValue) => setForm((prev) => ({ ...prev, birth_date: newValue }))}
+          disableFuture
+          openTo="year"                    // ← ouvre la vue Années en premier
+          views={["year", "month", "day"]} // ← navigation Année → Mois → Jour
+          slotProps={{
+            textField: {
+              required: true,
+              fullWidth: true,
+              InputLabelProps: { shrink: true },
+              placeholder: "jj/mm/aaaa",
+            },
+          }}
         />
 
         <FormControl fullWidth>

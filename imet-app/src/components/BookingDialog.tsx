@@ -1,3 +1,5 @@
+// src/components/BookingDialog.tsx
+
 import React, { useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
@@ -124,9 +126,10 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({ open, booking, onC
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirmer la modification</DialogTitle>
         <DialogContent>
-          <Typography>
-            Êtes-vous sûr de vouloir changer le statut en "{targetStatus ? getStatusLabel(targetStatus) : ''}" ?
-          </Typography>
+        <Typography>
+          Êtes-vous sûr de vouloir changer le statut en{' '}
+          <strong>{targetStatus ? getStatusLabel(targetStatus) : '—'}</strong> ?
+        </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Annuler</Button>

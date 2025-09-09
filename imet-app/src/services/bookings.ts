@@ -1,3 +1,5 @@
+// src/services/bookings
+
 import { supabase, executeQuery } from './supabase';
 import type { Booking, UpdateBookingData, SejourStatus, ExtendedCreateBookingDataForServer, PersonDetails } from '../types/booking';
 import { calculateBookingCost } from '../utils/bookingUtils';
@@ -115,19 +117,7 @@ async create(userId: string, bookingData: ExtendedCreateBookingDataForServer): P
 
 
   async update(id: string, updates: UpdateBookingData): Promise<{ data: Booking | null; error: string | null }> {
-    /*
-    if (updates.start_date || updates.end_date) {
-      const currentBooking = await this.getById(id);
-      if (currentBooking.error || !currentBooking.data) return { data: null, error: 'Réservation introuvable' };
-
-      const startDate = updates.start_date || currentBooking.data.start_date;
-      const endDate = updates.end_date || currentBooking.data.end_date;
-
-      const conflictCheck = await this.checkDateConflict(startDate, endDate, id);
-      if (conflictCheck.error) return { data: null, error: conflictCheck.error };
-      if (conflictCheck.hasConflict) return { data: null, error: 'Conflit de dates' };
-    }
-    */
+    
     return executeQuery(async () => {
       const { data, error } = await supabase
         .from('bookings')
@@ -146,11 +136,6 @@ async create(userId: string, bookingData: ExtendedCreateBookingDataForServer): P
       return { error: error.message };
     }
   },
-
-  /*
-  async updateStatus(id: string, status: SejourStatus): Promise<{ data: Booking | null; error: string | null }> {
-    return this.update(id, { status });
-  },*/
 
     async updateStatus(id: string, status: SejourStatus): Promise<{ error: string | null }> {
     const { error } = await supabase

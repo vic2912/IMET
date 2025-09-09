@@ -1,9 +1,9 @@
 import React from 'react';
-import { useBookings } from '../hooks/useBookings';
+import { useAdminBookings } from '../hooks/useBookings';
 import { BookingCalendar } from '../components/BookingCalendar';
 
 export const BookingsPage: React.FC = () => {
-const { data: bookings = [], isLoading, error } = useBookings();
+const { data: bookings = [], isLoading, error } = useAdminBookings();
 
 if (isLoading) return <div>Chargement...</div>;
 if (error) return <div>Erreur : {error.message}</div>;

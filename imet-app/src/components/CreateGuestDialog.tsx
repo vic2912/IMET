@@ -1,7 +1,11 @@
+// src/components/CreateGuestDialog.tsx
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Stack,
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  TextField, Button, Stack,
 } from '@mui/material';
-
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { format } from 'date-fns';
 
 interface Props {
   open: boolean;
@@ -16,7 +20,7 @@ interface Props {
 
 export const CreateGuestDialog: React.FC<Props> = ({ open, onClose, onSubmit }) => {
   const [fullName, setFullName] = useState('');
-  const [birthDate, setBirthDate] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [phone, setPhone] = useState('');
   const [allergies, setAllergies] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,7 +31,7 @@ export const CreateGuestDialog: React.FC<Props> = ({ open, onClose, onSubmit }) 
     setLoading(true);
     const success = await onSubmit({
       full_name: fullName,
-      birth_date: birthDate || undefined,
+      birth_date: birthDate ? format(birthDate, 'yyyy-MM-dd') : undefined, // ← ISO (yyyy-MM-dd) pour la base
       phone: phone || undefined,
       allergies: allergies || undefined,
     });
@@ -35,7 +39,7 @@ export const CreateGuestDialog: React.FC<Props> = ({ open, onClose, onSubmit }) 
 
     if (success) {
       setFullName('');
-      setBirthDate('');
+      setBirthDate(null);
       setPhone('');
       setAllergies('');
       onClose();
@@ -52,18 +56,31 @@ export const CreateGuestDialog: React.FC<Props> = ({ open, onClose, onSubmit }) 
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
+            fullWidth
           />
-          <TextField
+
+          {/* Sélecteur de date avec choix direct de l’année */}
+          <DatePicker
             label="Date de naissance"
-            type="date"
-            InputLabelProps={{ shrink: true }}
             value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
+            onChange={(newValue) => setBirthDate(newValue)}
+            disableFuture
+            openTo="year"                    // ← ouvre directement sur les années
+            views={['year', 'month', 'day']} // ← navigation année → mois → jour
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                InputLabelProps: { shrink: true },
+                placeholder: 'jj/mm/aaaa',
+              },
+            }}
           />
+
           <TextField
             label="Téléphone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            fullWidth
           />
           <TextField
             label="Allergies"
@@ -71,6 +88,7 @@ export const CreateGuestDialog: React.FC<Props> = ({ open, onClose, onSubmit }) 
             onChange={(e) => setAllergies(e.target.value)}
             multiline
             rows={2}
+            fullWidth
           />
         </Stack>
       </DialogContent>

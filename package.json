@@ -2,6 +2,11 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.49.10",
     "notistack": "^3.0.2",
-    "react-query": "^3.39.3"
+    "react-is": "^19.1.1",
+    "react-query": "^3.39.3",
+    "recharts": "^3.1.2"
+  },
+  "devDependencies": {
+    "@types/recharts": "^1.8.29"
   }
 }

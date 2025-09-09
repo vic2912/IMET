@@ -1,5 +1,4 @@
 // src/components/NotificationBadge.tsx
-
 import React, { useState } from 'react';
 import { IconButton, Badge } from '@mui/material';
 import { Notifications as NotificationsIcon } from '@mui/icons-material';
@@ -8,9 +7,10 @@ import { useNotifications } from '../hooks/useNotifications';
 
 interface NotificationBadgeProps {
   userId: string;
+  onOpenSettings?: () => void; // <<— AJOUT
 }
 
-export const NotificationBadge: React.FC<NotificationBadgeProps> = ({ userId }) => {
+export const NotificationBadge: React.FC<NotificationBadgeProps> = ({ userId, onOpenSettings }) => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   
   const {
@@ -34,9 +34,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({ userId }) 
 
   const handleSettingsClick = () => {
     handleClose();
-    // Pour le moment, on ferme juste le panel
-    // Vous pouvez ajouter ici la logique pour ouvrir une vue de paramètres
-    console.log('Paramètres de notifications');
+    onOpenSettings?.();              // <<— OUVERTURE DE LA MODALE
   };
 
   const open = Boolean(anchorEl);
@@ -64,7 +62,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({ userId }) 
         onMarkAllAsRead={markAllAsRead}
         onDelete={deleteNotification}
         onLoadMore={loadMore}
-        onSettingsClick={handleSettingsClick}
+        onSettingsClick={handleSettingsClick}   // <<— utilise la prop
         hasMore={notifications.length % 20 === 0 && notifications.length > 0}
       />
     </>

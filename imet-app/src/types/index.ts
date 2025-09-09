@@ -5,15 +5,13 @@ export * from './auth';
 export * from './booking';
 export * from './expense';
 export * from './notification';
-export * from './admin';
-export * from './common';
-export * from './family';
+
 
 // Constantes utiles
 import type { SejourStatus } from './booking';
 import type { ExpenseStatus, ExpenseCategory } from './expense';
 
-export const BOOKING_STATUSES: SejourStatus[] = ['planifié', 'réalisé', 'payé'];
+export const BOOKING_STATUSES: SejourStatus[] = ['pending', 'completed', 'paid', 'cancelled'];
 
 export const EXPENSE_STATUSES: ExpenseStatus[] = ['pending', 'approved', 'rejected'];
 

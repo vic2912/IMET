@@ -1,6 +1,12 @@
 // src/types/notifications.ts
 
 export type NotificationType = 
+  | 'arrival_checklist'
+  | 'departure_checklist'
+  | 'payment_reminder_j7'
+  | 'payment_reminder_j30'
+  | 'event_created'
+  | 'event_closed'
   | 'booking_created_for_you'
   | 'booking_confirmed'
   | 'booking_cancelled'
@@ -163,6 +169,36 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, {
   welcome: {
     title: 'Bienvenue sur IMet !',
     message: 'Votre compte a été créé avec succès',
+    priority: 2
+  },
+  arrival_checklist: {
+    title: 'Bienvenue !',
+    message: 'Votre arrivée est aujourd’hui. Ouvrez la checklist d’arrivée.',
+    priority: 3
+  },
+  departure_checklist: {
+    title: 'Départ aujourd’hui',
+    message: 'Pensez à la checklist de départ et au règlement du séjour.',
+    priority: 3
+  },
+  payment_reminder_j7: {
+    title: 'Rappel de paiement',
+    message: 'Votre séjour n’est pas encore réglé (J+7). Merci de finaliser le paiement.',
+    priority: 4
+  },
+  payment_reminder_j30: {
+    title: 'Deuxième rappel de paiement',
+    message: 'Votre séjour n’est toujours pas réglé (J+30). Merci de le régulariser.',
+    priority: 4
+  },
+  event_created: {
+    title: 'Nouvel événement',
+    message: 'Un nouvel événement a été déclaré : {{event_title}}',
+    priority: 2
+  },
+  event_closed: {
+    title: 'Événement clôturé',
+    message: 'L’événement est clôturé : {{event_title}}',
     priority: 2
   }
 };
