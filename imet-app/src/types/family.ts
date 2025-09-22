@@ -41,15 +41,17 @@ export type CreateFamilyRelationData = {
 export interface User {
   id: string;
   email: string;
-  full_name: string;
+  full_name: string | null;
+  family_name: string | null;
   phone?: string;
-  birth_date?: string;
+  birth_date?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
   is_admin?: boolean;
   allergies?: string;
   is_student?: boolean;
+  profile_completed_at?: string | null;
   // Relations familiales
   family_relations?: FamilyRelation[];
   related_to?: FamilyRelation[];

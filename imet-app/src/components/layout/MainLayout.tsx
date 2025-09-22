@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+// src/components/layout/MainLayout.tsx
+
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import {
@@ -29,6 +31,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogoutSuccess })
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -39,6 +42,58 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogoutSuccess })
   const [profileOpen, setProfileOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
+
+  // 🚦 Redirection vers l'onboarding si le profil n'est pas complété
+  // 🚦 Redirection vers l'onboarding si le profil n'est pas complété
+  useEffect(() => {
+    const path = location.pathname;
+    const isAuthOrOnboarding = path.startsWith('/auth') || path.startsWith('/onboarding');
+
+    // 1) Définition unique du "profil complet"
+    const isComplete =
+      !!user?.full_name?.trim() &&
+      !!user?.family_name?.trim() &&
+      !!user?.birth_date &&               // string/Date accepté
+      !!user?.profile_completed_at;
+
+    // 2) Mécanisme anti-boucle :
+    //    - state passé par Onboarding
+    //    - ET fallback localStorage (si le state est perdu)
+    const justCompletedState = (location.state as any)?.onboardingJustCompleted === true;
+    const justCompletedLS = localStorage.getItem('imet_onboarding_completed') === '1';
+    const justCompleted = justCompletedState || justCompletedLS;
+
+    if (isAuthOrOnboarding) {
+      // Si on est dans /auth* ou /onboarding, ne pas interférer.
+      return;
+    }
+
+    if (!isComplete) {
+      // Profil incomplet → normalement on redirige vers Onboarding
+      // ... sauf si on sort à l'instant de l'onboarding (flag 1-shot)
+      if (justCompleted) {
+        // purge le flag et le state, puis on laisse passer ce render
+        if (justCompletedLS) localStorage.removeItem('imet_onboarding_completed');
+        if (justCompletedState) navigate(path, { replace: true, state: {} });
+        return;
+      }
+      navigate('/onboarding', { replace: true });
+      return;
+    }
+
+    // Profil complet : si un flag traîne encore, on le nettoie.
+    if (justCompletedLS) localStorage.removeItem('imet_onboarding_completed');
+    if (justCompletedState) navigate(path, { replace: true, state: {} });
+
+  }, [
+    user?.full_name,
+    user?.family_name,
+    user?.birth_date,
+    user?.profile_completed_at,
+    location.pathname,
+    location.state,
+    navigate
+  ]);
 
   // ✨ Hauteurs figées
   const TOOLBAR_H = isMobile ? 56 : 64;
@@ -217,7 +272,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogoutSuccess })
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             IMet - Gestion Maison Familiale
           </Typography>
-
+          {isMobile && (
+            <NotificationBadge
+              userId={user.id}
+              onOpenSettings={() => setNotifSettingsOpen(true)}
+            />
+          )}
           {!isMobile && (
             <>
               <Typography variant="body2" sx={{ mr: 2, cursor: 'pointer', textDecoration: 'underline' }}

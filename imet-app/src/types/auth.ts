@@ -31,6 +31,6 @@ export interface LoginCredentials {
 export interface SignupData {
   email: string;
   password: string;
-  fullName: string;
-  familyName?: string;
+  fullName?: string;
+  familyName?: string | null;
 }
