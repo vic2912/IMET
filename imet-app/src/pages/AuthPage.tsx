@@ -55,7 +55,7 @@ export const AuthPage: React.FC = () => {
           // ✅ Info pédagogique : si la confirmation email est activée dans Supabase,
           // un email est envoyé automatiquement. On affiche le message côté UI.
           setSignUpInfo(
-            `Un email de confirmation a été envoyé à ${form.email}. Pense à vérifier les spams.`
+            `Un email de confirmation a été envoyé à ${form.email}. Penses à vérifier les spams.`
           );
 
           // Optionnel : rester sur l’onglet "signup" pour que l’utilisateur lise le message

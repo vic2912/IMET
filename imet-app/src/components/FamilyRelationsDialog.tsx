@@ -179,9 +179,11 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
 
         const merged = mergeAndDedupe(users, guests).filter(p => p.id !== userId);
         if (!cancelled) {
-          setInitialOptions(merged);
-          setListToShow(merged); // montrer toute la liste d’emblée
-        }
+          const onlyProfiles = !!preset?.is_guest; // si on vient d’un “Créer un invité”
+          const filtered = onlyProfiles ? merged.filter(p => p.source === 'user') : merged;
+          setInitialOptions(filtered);
+          setListToShow(filtered);
+        } 
       } catch (e) {
         // eslint-disable-next-line no-console
         console.warn('[FamilyRelationsDialog] initial list load error:', e);
@@ -194,7 +196,7 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [open, userId]);
+  }, [open, userId, preset]);
 
   /** 3) Pré-remplissage (après “Créer un invité”) */
   useEffect(() => {
@@ -214,21 +216,19 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
         birth_date: null,
         source: preset.is_guest ? 'guest' : 'user'
       };
-      setSelectedUser(pre);
+      if (!preset.is_guest) {
+        // On ne pré-sélectionne QUE les profils (users), pas les invités
+        setSelectedUser(pre);
+      } else {
+        setSelectedUser(null); // on laisse l’utilisateur choisir un profil “profiles”
+      }
 
       // L’insérer en tête si absent
-      setInitialOptions(prev => {
-        const merged = mergeAndDedupe(
-          prev.filter(p => p.source === 'user') as unknown as User[],
-          prev.filter(p => p.source === 'guest') as unknown as Guest[]
-        );
-        const exists = merged.some(o => o.id === pre.id && o.source === pre.source);
-        return exists ? merged : [pre, ...merged];
-      });
-      setListToShow(prev => {
-        const exists = prev.some(o => o.id === pre.id && o.source === pre.source);
-        return exists ? prev : [pre, ...prev];
-      });
+      if (!preset.is_guest) {
+        // On ajoute le profil pré-rempli en tête s’il n’est pas déjà là
+        setInitialOptions(prev => (prev.some(o => o.id === pre.id && o.source === pre.source) ? prev : [pre, ...prev]));
+        setListToShow(prev => (prev.some(o => o.id === pre.id && o.source === pre.source) ? prev : [pre, ...prev]));
+      }
 
       if (presetRelationshipType) {
         setRelationshipType(presetRelationshipType);
@@ -269,10 +269,15 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
       }
       const users: User[] = unwrapUsersResult(resUsers);
 
-      const guestsResp = await userService.getGuests();
-      const guestsArr = (guestsResp.data ?? []).filter(g =>
-        norm(g.full_name).toLowerCase().includes(query.toLowerCase())
-      );
+      const onlyProfiles = !!preset?.is_guest;
+
+      let guestsArr: Guest[] = [];
+      if (!onlyProfiles) {
+        const guestsResp = await userService.getGuests();
+        guestsArr = (guestsResp.data ?? []).filter(g =>
+          norm(g.full_name).toLowerCase().includes(query.toLowerCase())
+        );
+      }
 
       const merged = mergeAndDedupe(users, guestsArr).filter(p => p.id !== userId);
       setListToShow(merged);
@@ -313,7 +318,7 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
     setRelations(refreshed);
   };
 
-  const guardianPreview = relationshipType === 'parent' || relationshipType === 'child';
+  const guardianPreview = relationshipType === 'parent' || relationshipType === 'child' || relationshipType === 'spouse';
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -377,7 +382,7 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
                   filterOptions={(x) => x}                // pas de re-filtrage client
                   loading={searching}
                   loadingText="Recherche…"
-                  isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                  isOptionEqualToValue={(opt, val) => opt.id === val.id && opt.source === val.source}
                   getOptionLabel={(option) => norm(option.full_name)} // ❌ pas de “(Invité)”
                   value={selectedUser}
                   onChange={(_, value) => setSelectedUser(value)}
@@ -402,7 +407,7 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
                     {listToShow.map(p => (
                       <ListItem key={`${p.source}:${p.id}`} disablePadding>
                         <ListItemButton
-                          selected={selectedUser?.id === p.id}
+                          selected={selectedUser?.id === p.id && selectedUser?.source === p.source}
                           onClick={() => setSelectedUser(p)}
                         >
                           <ListItemText

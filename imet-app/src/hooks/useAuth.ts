@@ -108,7 +108,6 @@ export const useAuth = () => {
       }
 
       console.log('✅ Création de compte réussie');
-      setUser(data);
       return { success: true, data };
     } catch (error: any) {
       const errorMessage = error.message || 'Erreur lors de la création du compte';

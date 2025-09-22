@@ -75,31 +75,9 @@ export const useUsers = (currentUserId?: string) => {
 
   const refreshUsers = async () => loadUsers();
 
-  /**
-   * Récupère les relations familiales dans les deux sens :
-   * - relations définies par l'utilisateur
-   * - relations définies par d'autres vers l'utilisateur
-   * Toutes sont transformées pour que `related_user` désigne toujours "l'autre personne".
-   */
   const getUserFamilyRelations = async (userId: string): Promise<FamilyRelation[]> => {
-    const { data, error } = await userService.getUserById(userId);
-    if (error || !data) return [];
-
-    const direct = data.family_relations || [];
-
-    const inverse = (data.related_to || []).map(r => ({
-      ...r,
-      id: `inverse-${r.id}`, // clé unique
-      user_id: userId, // perspective de l'utilisateur courant
-      related_user_id: r.user_id,
-      relationship_type: r.relationship_type,
-      is_guardian: r.is_guardian,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      related_user: r.user // injecte le profil de la personne liée
-    }));
-
-    return [...direct, ...inverse];
+    const { data, error } = await userService.getUserFamilyRelations(userId);
+    return error || !data ? [] : data;
   };
 
   const addFamilyRelation = async (relation: CreateFamilyRelationData) => {
