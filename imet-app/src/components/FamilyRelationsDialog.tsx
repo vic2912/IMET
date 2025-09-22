@@ -10,7 +10,7 @@ import {
 import { Delete, PersonAdd, FamilyRestroom, ChildCare, Elderly } from '@mui/icons-material';
 
 import type {
-  User, Guest, FamilyRelation, RelationshipType, CreateFamilyRelationData
+  User, FamilyRelation, RelationshipType, CreateFamilyRelationData
 } from '../types/family';
 import { useUsers } from '../hooks/useUsers';
 import { userService } from '../services/userService';
@@ -35,15 +35,14 @@ const relationshipLabels: Record<RelationshipType, { label: string; icon: React.
   grandchild: { label: 'Petit-enfant de', icon: <ChildCare /> }
 };
 
-/** Représentation unifiée (on ne montre plus “(Invité)” dans l’UI) */
+/** Représentation unifiée : ici on ne liste que des profils (users) */
 type LinkablePerson = {
   id: string;
   full_name: string;
   email?: string | null;
   phone?: string | null;
   birth_date?: string | null;
-  /** interne : pour dédup, on préfère 'user' à 'guest' si même personne */
-  source: 'user' | 'guest';
+  source: 'user';
 };
 
 /* -------------------------- Helpers -------------------------- */
@@ -58,55 +57,6 @@ const unwrapUsersResult = (res: unknown): User[] => {
 };
 
 const norm = (s?: string | null) => (s || '').trim();
-const nameKey = (p: { full_name?: string | null; birth_date?: string | null; email?: string | null }) =>
-  `${norm(p.full_name).toLowerCase()}|${norm(p.birth_date)}|${norm(p.email).toLowerCase()}`;
-
-/** Fusionne users + guests et dédoublonne :
- *  - clé = nom|dateNaissance|email (compromis pratique)
- *  - si doublon, on préfère la source 'user'
- */
-const mergeAndDedupe = (users: User[], guests: Guest[]): LinkablePerson[] => {
-  const map = new Map<string, LinkablePerson>();
-
-  const put = (p: LinkablePerson) => {
-    const key = nameKey(p);
-    const existing = map.get(key);
-    if (!existing) {
-      map.set(key, p);
-    } else {
-      // en cas de conflit, privilégier 'user'
-      if (existing.source === 'guest' && p.source === 'user') {
-        map.set(key, p);
-      }
-    }
-  };
-
-  users.forEach(u =>
-    put({
-      id: u.id,
-      full_name: u.full_name,
-      email: u.email,
-      phone: u.phone,
-      birth_date: u.birth_date,
-      source: 'user'
-    })
-  );
-
-  guests.forEach(g =>
-    put({
-      id: g.id,
-      full_name: g.full_name,
-      email: null,
-      phone: g.phone ?? null,
-      birth_date: g.birth_date ?? null,
-      source: 'guest'
-    })
-  );
-
-  return Array.from(map.values()).sort((a, b) =>
-    norm(a.full_name).localeCompare(norm(b.full_name), 'fr', { sensitivity: 'base' })
-  );
-};
 
 /* ----------------------- Composant principal ----------------------- */
 
@@ -166,24 +116,31 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
     };
   }, [open, userId]);
 
-  /** 2) Charger la liste initiale (tout le monde) pour affichage sans taper */
+  /** 2) Charger la liste initiale (UNIQUEMENT PROFILES) */
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     (async () => {
       try {
-        const usersRes = await userService.getUsers();     // actifs par défaut
-        const guestsRes = await userService.getGuests();
+        const usersRes = await userService.getUsers(); // actifs par défaut
         const users = usersRes.data ?? [];
-        const guests = guestsRes.data ?? [];
 
-        const merged = mergeAndDedupe(users, guests).filter(p => p.id !== userId);
+        const options: LinkablePerson[] = users
+          .filter(u => u.id !== userId)
+          .map(u => ({
+            id: u.id,
+            full_name: u.full_name,
+            email: u.email ?? null,
+            phone: u.phone ?? null,
+            birth_date: u.birth_date ?? null,
+            source: 'user' as const
+          }))
+          .sort((a, b) => norm(a.full_name).localeCompare(norm(b.full_name), 'fr', { sensitivity: 'base' }));
+
         if (!cancelled) {
-          const onlyProfiles = !!preset?.is_guest; // si on vient d’un “Créer un invité”
-          const filtered = onlyProfiles ? merged.filter(p => p.source === 'user') : merged;
-          setInitialOptions(filtered);
-          setListToShow(filtered);
-        } 
+          setInitialOptions(options);
+          setListToShow(options);
+        }
       } catch (e) {
         // eslint-disable-next-line no-console
         console.warn('[FamilyRelationsDialog] initial list load error:', e);
@@ -196,7 +153,7 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [open, userId, preset]);
+  }, [open, userId]);
 
   /** 3) Pré-remplissage (après “Créer un invité”) */
   useEffect(() => {
@@ -214,7 +171,7 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
         email: null,
         phone: null,
         birth_date: null,
-        source: preset.is_guest ? 'guest' : 'user'
+        source: 'user' as const // dans ce composant, on ne manipule que des profils côté liste
       };
       if (!preset.is_guest) {
         // On ne pré-sélectionne QUE les profils (users), pas les invités
@@ -223,11 +180,10 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
         setSelectedUser(null); // on laisse l’utilisateur choisir un profil “profiles”
       }
 
-      // L’insérer en tête si absent
+      // L’insérer en tête si absent (seulement si c'est un profil)
       if (!preset.is_guest) {
-        // On ajoute le profil pré-rempli en tête s’il n’est pas déjà là
-        setInitialOptions(prev => (prev.some(o => o.id === pre.id && o.source === pre.source) ? prev : [pre, ...prev]));
-        setListToShow(prev => (prev.some(o => o.id === pre.id && o.source === pre.source) ? prev : [pre, ...prev]));
+        setInitialOptions(prev => (prev.some(o => o.id === pre.id) ? prev : [pre, ...prev]));
+        setListToShow(prev => (prev.some(o => o.id === pre.id) ? prev : [pre, ...prev]));
       }
 
       if (presetRelationshipType) {
@@ -249,9 +205,7 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
     setInitialOptions([]);
   }, [open]);
 
-  /** Recherche : si <2 lettres → on réaffiche la liste initiale
-   *  sinon on fait une recherche serveur (users + guests), on fusionne, on dédoublonne.
-   */
+  /** Recherche : si <2 lettres → liste initiale, sinon : recherche UNIQUEMENT dans profiles */
   const handleSearch = async (query: string) => {
     if (query.length < 2) {
       setListToShow(initialOptions);
@@ -269,18 +223,19 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
       }
       const users: User[] = unwrapUsersResult(resUsers);
 
-      const onlyProfiles = !!preset?.is_guest;
+      const results: LinkablePerson[] = users
+        .filter(u => u.id !== userId)
+        .map(u => ({
+          id: u.id,
+          full_name: u.full_name,
+          email: u.email ?? null,
+          phone: u.phone ?? null,
+          birth_date: u.birth_date ?? null,
+          source: 'user' as const
+        }))
+        .sort((a, b) => norm(a.full_name).localeCompare(norm(b.full_name), 'fr', { sensitivity: 'base' }));
 
-      let guestsArr: Guest[] = [];
-      if (!onlyProfiles) {
-        const guestsResp = await userService.getGuests();
-        guestsArr = (guestsResp.data ?? []).filter(g =>
-          norm(g.full_name).toLowerCase().includes(query.toLowerCase())
-        );
-      }
-
-      const merged = mergeAndDedupe(users, guestsArr).filter(p => p.id !== userId);
-      setListToShow(merged);
+      setListToShow(results);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn('[FamilyRelationsDialog] search error:', e);
@@ -318,7 +273,8 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
     setRelations(refreshed);
   };
 
-  const guardianPreview = relationshipType === 'parent' || relationshipType === 'child' || relationshipType === 'spouse';
+  // Aligné sur le backend: guardian uniquement pour parent/enfant
+  const guardianPreview = relationshipType === 'parent' || relationshipType === 'child';
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -382,7 +338,7 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
                   filterOptions={(x) => x}                // pas de re-filtrage client
                   loading={searching}
                   loadingText="Recherche…"
-                  isOptionEqualToValue={(opt, val) => opt.id === val.id && opt.source === val.source}
+                  isOptionEqualToValue={(opt, val) => opt.id === val.id}
                   getOptionLabel={(option) => norm(option.full_name)} // ❌ pas de “(Invité)”
                   value={selectedUser}
                   onChange={(_, value) => setSelectedUser(value)}
@@ -405,9 +361,9 @@ export const FamilyRelationsDialog: React.FC<FamilyRelationsDialogProps> = ({
                 <Box sx={{ maxHeight: 260, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                   <List dense disablePadding>
                     {listToShow.map(p => (
-                      <ListItem key={`${p.source}:${p.id}`} disablePadding>
+                      <ListItem key={p.id} disablePadding>
                         <ListItemButton
-                          selected={selectedUser?.id === p.id && selectedUser?.source === p.source}
+                          selected={selectedUser?.id === p.id}
                           onClick={() => setSelectedUser(p)}
                         >
                           <ListItemText
