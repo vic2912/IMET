@@ -35,59 +35,43 @@ export const authService = {
         password: credentials.password,
       });
 
-      if (authError) {
-        return { data: null, error: authError.message };
+      if (authError) return { data: null, error: authError.message };
+      if (!authData.user) return { data: null, error: 'Erreur lors de la connexion' };
+
+      const userId = authData.user.id;
+
+      // 1) Charger le profil existant (créé par le trigger)
+      let { data: profile, error: loadErr } = await this.getUserProfile(userId);
+      if (!profile) {
+        // 2) Petit retry (le trigger peut être légèrement asynchrone)
+        await new Promise(r => setTimeout(r, 300));
+        ({ data: profile } = await this.getUserProfile(userId));
       }
 
-      if (authData.user) {
-        return this.getUserProfile(authData.user.id);
-      }
-
-      return { data: null, error: 'Erreur lors de la connexion' };
+      return { data: profile ?? null, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
   },
 
-  // Inscription
+
+  // Inscription (minimal : email + mot de passe)
   async signUp(signupData: SignupData): Promise<{ data: User | null; error: string | null }> {
     try {
-      // 1. Créer le compte utilisateur
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: signupData.email,
         password: signupData.password,
         options: {
-          emailRedirectTo: 'https://imet-olive.vercel.app/auth/callback'
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+          // Pas besoin d'envoyer full_name ici : on le demandera dans l'onboarding
         }
       });
 
-      if (authError) {
-        return { data: null, error: authError.message };
-      }
+      if (authError) return { data: null, error: authError.message };
+      if (!authData.user) return { data: null, error: 'Erreur lors de la création du compte' };
 
-      if (!authData.user) {
-        return { data: null, error: 'Erreur lors de la création du compte' };
-      }
-
-      // 2. Créer le profil utilisateur
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: signupData.email,
-          full_name: signupData.fullName,
-          family_name: signupData.familyName,
-          is_admin: false,
-          is_active: true
-        })
-        .select()
-        .single();
-
-      if (profileError) {
-        return { data: null, error: profileError.message };
-      }
-
-      return { data: profileData, error: null };
+      // On ne crée/écrit rien dans profiles ici (RLS) : le trigger s'en charge.
+      return { data: null, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
@@ -105,13 +89,25 @@ export const authService = {
 
   // Écouter les changements d'authentification
   onAuthStateChange(callback: (user: User | null) => void) {
-    return supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const { data: user } = await this.getUserProfile(session.user.id);
-        callback(user);
-      } else {
+    return supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session?.user) {
         callback(null);
+        return;
       }
+
+      const userId = session.user.id;
+
+      // Tenter de charger le profil (créé par trigger)
+      const tryLoad = async () => {
+        let { data: u } = await this.getUserProfile(userId);
+        if (u) return u;
+        await new Promise(r => setTimeout(r, 250));
+        ({ data: u } = await this.getUserProfile(userId));
+        return u ?? null;
+      };
+
+      const user = await tryLoad();
+      callback(user);
     });
   },
 

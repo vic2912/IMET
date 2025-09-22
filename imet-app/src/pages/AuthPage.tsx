@@ -24,9 +24,7 @@ export const AuthPage: React.FC = () => {
   const [authMode, setAuthMode] = React.useState<'login' | 'signup'>('login');
   const [form, setForm] = React.useState({
     email: '',
-    password: '',
-    fullName: '',
-    familyName: ''
+    password: ''
   });
 
   // ✅ État local pour montrer un bandeau "Email envoyé" après inscription
@@ -37,16 +35,9 @@ export const AuthPage: React.FC = () => {
       if (authMode === 'signup') {
         setSignUpInfo(null);
 
-        if (!form.fullName.trim()) {
-          showError('Le nom complet est requis');
-          return;
-        }
-
         const result = await signUp({
           email: form.email,
-          password: form.password,
-          fullName: form.fullName,
-          familyName: form.familyName
+          password: form.password
         });
 
         if (result.success) {
@@ -120,24 +111,6 @@ export const AuthPage: React.FC = () => {
                 </Box>
               )}
             </Box>
-
-            {authMode === 'signup' && (
-              <>
-                <TextField
-                  label="Nom complet"
-                  value={form.fullName}
-                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                  fullWidth
-                  required
-                />
-                <TextField
-                  label="Nom de famille"
-                  value={form.familyName}
-                  onChange={(e) => setForm({ ...form, familyName: e.target.value })}
-                  fullWidth
-                />
-              </>
-            )}
 
             <Button
               variant="contained"
