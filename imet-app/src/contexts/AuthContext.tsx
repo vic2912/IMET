@@ -77,7 +77,6 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   // Actions
   const signIn: AuthContextValue['signIn'] = async (c) => {
     try {
-      setLoading(true);
       setError(null);
       const { data, error } = await authService.signIn(c);
       if (error) {
@@ -86,14 +85,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       }
       setUser(data ?? null);
       return { success: true, data: data ?? null };
-    } finally {
-      setLoading(false);
-    }
+    } finally {}
   };
 
   const signUp: AuthContextValue['signUp'] = async (s) => {
     try {
-      setLoading(true);
       setError(null);
       const { data, error } = await authService.signUp(s);
       if (error) {
@@ -102,14 +98,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       }
       // Email de confirmation envoyé ; pas de user tant que pas confirmé
       return { success: true, data: null };
-    } finally {
-      setLoading(false);
-    }
+    } finally {}
   };
 
   const signOut: AuthContextValue['signOut'] = async () => {
     try {
-      setLoading(true);
       setError(null);
       const { error } = await authService.signOut();
       if (error) {
@@ -118,15 +111,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       }
       setUser(null);
       return { success: true };
-    } finally {
-      setLoading(false);
-    }
+    } finally {}
   };
 
   const updateProfile: AuthContextValue['updateProfile'] = async (updates) => {
     if (!user) return { success: false, error: 'Aucun utilisateur connecté' };
     try {
-      setLoading(true);
       setError(null);
       const { data, error } = await authService.updateProfile(user.id, updates);
       if (error) {
@@ -136,9 +126,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       // 🔁 Très important : on met à jour le "store" global
       setUser(data ?? null);
       return { success: true, data: data ?? null };
-    } finally {
-      setLoading(false);
-    }
+    } finally {}
   };
 
   const clearError = () => setError(null);

@@ -2,7 +2,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Snackbar, Alert } from '@mui/material';
+import { useSnackbar } from 'notistack';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { fr } from 'date-fns/locale';
@@ -10,7 +10,6 @@ import { SnackbarProvider } from 'notistack';
 
 // Hooks
 import { useAuth } from './hooks/useAuth';
-import { useNotification } from './hooks/useNotification';
 
 // Pages
 import { AuthPage } from './pages/AuthPage';
@@ -61,7 +60,7 @@ if (typeof window !== 'undefined') {
 /** Séparation des routes pour pouvoir appeler useAuth sous le Provider */
 const AppRoutes: React.FC = () => {
   const { user, isAuthenticated, loading } = useAuth();
-  const { notification, hideNotification, showSuccess } = useNotification();
+  const { enqueueSnackbar } = useSnackbar();
 
   if (loading) return null;
 
@@ -77,7 +76,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/*" element={<AuthPage />} />
           </>
         ) : (
-          <Route element={<MainLayout user={user! as any} onLogoutSuccess={showSuccess} />}>
+          <Route element={<MainLayout user={user! as any} onLogoutSuccess={(msg: string) => enqueueSnackbar(msg, { variant: 'success' })} />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
@@ -111,12 +110,6 @@ const AppRoutes: React.FC = () => {
           </Route>
         )}
       </Routes>
-
-      <Snackbar open={notification.open} autoHideDuration={6000} onClose={hideNotification}>
-        <Alert severity={notification.severity} onClose={hideNotification}>
-          {notification.message}
-        </Alert>
-      </Snackbar>
     </>
   );
 };

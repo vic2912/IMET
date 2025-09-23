@@ -15,12 +15,13 @@ import { Login, PersonAdd } from '@mui/icons-material';
 import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../hooks/useNotification';
 import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
 
 export const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
-  const { showSuccess, showError } = useNotification();
-
+  const { enqueueSnackbar } = useSnackbar();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [authMode, setAuthMode] = React.useState<'login' | 'signup'>('login');
   const [form, setForm] = React.useState({
     email: '',
@@ -30,8 +31,10 @@ export const AuthPage: React.FC = () => {
   // ✅ État local pour montrer un bandeau "Email envoyé" après inscription
   const [signUpInfo, setSignUpInfo] = React.useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     try {
+      setIsSubmitting(true);
       if (authMode === 'signup') {
         setSignUpInfo(null);
 
@@ -41,19 +44,12 @@ export const AuthPage: React.FC = () => {
         });
 
         if (result.success) {
-          showSuccess('Compte créé avec succès !');
-
-          // ✅ Info pédagogique : si la confirmation email est activée dans Supabase,
-          // un email est envoyé automatiquement. On affiche le message côté UI.
-          setSignUpInfo(
-            `Un email de confirmation a été envoyé à ${form.email}. Penses à vérifier les spams.`
-          );
-
-          // Optionnel : rester sur l’onglet "signup" pour que l’utilisateur lise le message
-          // ou basculer sur "login" si tu préfères :
-          // setAuthMode('login');
+          enqueueSnackbar('Compte créé avec succès !', { variant: 'success' });
+          const msg = `Un email de confirmation a été envoyé à ${form.email}. Pense à vérifier les spams.`;
+          setSignUpInfo(msg);
+          enqueueSnackbar(msg, { variant: 'info' });
         } else {
-          showError(result.error || 'Erreur lors de la création du compte');
+          enqueueSnackbar(result.error || 'Erreur lors de la création du compte', { variant: 'error' });
         }
       } else {
         const result = await signIn({
@@ -61,14 +57,16 @@ export const AuthPage: React.FC = () => {
           password: form.password
         });
 
-        result.success
-          ? showSuccess('Connexion réussie !')
-          : showError(result.error || 'Erreur lors de la connexion');
+       result.success
+          ? enqueueSnackbar('Connexion réussie !', { variant: 'success' })
+          : enqueueSnackbar(result.error || 'Erreur lors de la connexion', { variant: 'error' });
       }
     } catch (err: any) {
-      showError(err.message || 'Une erreur est survenue');
-    }
-  };
+       enqueueSnackbar(err.message || 'Une erreur est survenue', { variant: 'error' });
+   } finally {
+      setIsSubmitting(false);
+     }
+   };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 8 }}>
@@ -78,66 +76,70 @@ export const AuthPage: React.FC = () => {
           <Typography variant="subtitle1" color="textSecondary" align="center">
             Gestion de votre maison familiale
           </Typography>
-
-          <Stack spacing={3} mt={3}>
-            <TextField
-              label="Email"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              fullWidth
-              required
-            />
-
-            <Box>
+          <Box component="form" noValidate onSubmit={handleSubmit}>
+            <Stack spacing={3} mt={3}>
               <TextField
-                label="Mot de passe"
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                label="Email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
                 fullWidth
                 required
               />
-              {/* ✅ Lien 'Mot de passe oublié ?' seulement en mode login */}
-              {authMode === 'login' && (
-                <Box sx={{ mt: 1, textAlign: 'right' }}>
-                  <Button
-                    variant="text"
-                    size="small"
-                    onClick={() => navigate('/forgot-password')}
-                  >
-                    Mot de passe oublié ?
-                  </Button>
-                </Box>
+
+              <Box>
+                <TextField
+                  label="Mot de passe"
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  fullWidth
+                  required
+                />
+                {/* ✅ Lien 'Mot de passe oublié ?' seulement en mode login */}
+                {authMode === 'login' && (
+                  <Box sx={{ mt: 1, textAlign: 'right' }}>
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => navigate('/forgot-password')}
+                    >
+                      Mot de passe oublié ?
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+
+              <Button
+                variant="contained"
+                size="large"
+                type="submit"
+                disabled={!form.email || !form.password || isSubmitting}
+                startIcon={authMode === 'login' ? <Login /> : <PersonAdd />}
+              >
+              {isSubmitting
+                ? (authMode === 'login' ? 'Connexion…' : 'Création…')
+                : (authMode === 'login' ? 'Se connecter' : 'Créer un compte')}
+              </Button>
+
+              <Button
+                variant="text"
+                onClick={() => {
+                  setAuthMode(authMode === 'login' ? 'signup' : 'login');
+                  setSignUpInfo(null);
+                }}
+              >
+                {authMode === 'login'
+                  ? 'Pas encore de compte ? Créer un compte'
+                  : 'Déjà un compte ? Se connecter'}
+              </Button>
+
+              {/* ✅ Bandeau d’information après sign up */}
+              {authMode === 'signup' && signUpInfo && (
+                <Alert severity="info">{signUpInfo}</Alert>
               )}
-            </Box>
-
-            <Button
-              variant="contained"
-              size="large"
-              onClick={handleSubmit}
-              startIcon={authMode === 'login' ? <Login /> : <PersonAdd />}
-            >
-              {authMode === 'login' ? 'Se connecter' : 'Créer un compte'}
-            </Button>
-
-            <Button
-              variant="text"
-              onClick={() => {
-                setAuthMode(authMode === 'login' ? 'signup' : 'login');
-                setSignUpInfo(null);
-              }}
-            >
-              {authMode === 'login'
-                ? 'Pas encore de compte ? Créer un compte'
-                : 'Déjà un compte ? Se connecter'}
-            </Button>
-
-            {/* ✅ Bandeau d’information après sign up */}
-            {authMode === 'signup' && signUpInfo && (
-              <Alert severity="info">{signUpInfo}</Alert>
-            )}
-          </Stack>
+            </Stack>
+          </Box>
         </CardContent>
       </Card>
     </Container>
