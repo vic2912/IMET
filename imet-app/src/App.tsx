@@ -70,10 +70,10 @@ const AppRoutes: React.FC = () => {
       <Routes>
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
         {!isAuthenticated ? (
           <>
-            <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/*" element={<AuthPage />} />
           </>
         ) : (
@@ -87,7 +87,6 @@ const AppRoutes: React.FC = () => {
             <Route path="/tribu" element={<TribesPage />} />
             <Route path="/care/checklists" element={<CareChecklistsPage />} />
             <Route path="/care/Inventory" element={<CareInventoryPage />} />
-
             {NOTICES.map((n) => (
               <Route key={n.path} path={n.path} element={<n.Component />} />
             ))}
