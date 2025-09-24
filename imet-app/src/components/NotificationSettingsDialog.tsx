@@ -1,32 +1,14 @@
 // src/components/NotificationSettingsDialog.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Stack,
-  Typography,
-  Divider,
-  Switch,
-  FormGroup,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  Alert,
-  Box,
-  CircularProgress,
-  Chip,
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography, Divider, 
+  Switch, FormGroup, FormControlLabel, Select, MenuItem, Alert, Box, CircularProgress, Chip } from '@mui/material';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import EmailIcon from '@mui/icons-material/Email';
 import SmartphoneIcon from '@mui/icons-material/Smartphone';
 import WebAssetIcon from '@mui/icons-material/WebAsset';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { notificationService } from '../services/notificationService';
-import type { NotificationPreferences, NotificationType } from '../types/notification';
-import { enableNotifications, shouldOfferEnableButton } from '../lib/notification';
+import type { NotificationSettings, NotificationType } from '../types/notification';
 
 type Props = {
   open: boolean;
@@ -38,19 +20,17 @@ const SUPPORTED_TYPES: NotificationType[] = [
   // Tes nouveaux cas
   'arrival_checklist',
   'departure_checklist',
-  'payment_reminder_j7',
-  'payment_reminder_j30',
+  'payment_reminder',
   'event_created',
   'event_closed',
 ];
 
 const TYPE_LABELS: Partial<Record<NotificationType, string>> = {
-  arrival_checklist: 'Arrivée — Checklist (jour J, maison vide)',
-  departure_checklist: 'Départ — Checklist + Paiement (jour J)',
-  payment_reminder_j7: 'Rappel Paiement J+7',
-  payment_reminder_j30: 'Rappel Paiement J+30',
-  event_created: 'Événement — Création',
-  event_closed: 'Événement — Clôture',
+  arrival_checklist: 'Préparer mon arrivée',
+  departure_checklist: 'Préparer mon départ',
+  payment_reminder: 'Rappel Paiement',
+  event_created: 'Nouveau séjour créé',
+  event_closed: 'Nouveau séjour annulé',
   expense_approved: 'Dépense approuvée',
   expense_rejected: 'Dépense rejetée',
   admin_promotion: 'Promotion admin',
@@ -65,7 +45,7 @@ export const NotificationSettingsDialog: React.FC<Props> = ({ open, userId, onCl
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
+  const [prefs, setPrefs] = useState<NotificationSettings | null>(null);
 
   // Charger les préférences à l’ouverture
   useEffect(() => {
@@ -86,7 +66,7 @@ export const NotificationSettingsDialog: React.FC<Props> = ({ open, userId, onCl
             filled.preferences[t] = { email: true, push: true, in_app: true };
           }
         }
-        setPrefs(filled as NotificationPreferences);
+        setPrefs(filled as NotificationSettings);
       }
       setLoading(false);
     };
@@ -94,12 +74,11 @@ export const NotificationSettingsDialog: React.FC<Props> = ({ open, userId, onCl
     return () => { mounted = false; };
   }, [open, userId]);
 
-  const canOfferEnable = useMemo(() => shouldOfferEnableButton(), []);
 
   // Handlers globals
-  const updateGlobal = (key: keyof NotificationPreferences, value: any) => {
+  const updateGlobal = (key: keyof NotificationSettings, value: any) => {
     if (!prefs) return;
-    setPrefs(prev => prev ? { ...prev, [key]: value } as NotificationPreferences : prev);
+    setPrefs(prev => prev ? { ...prev, [key]: value } as NotificationSettings : prev);
   };
 
   // Handlers par type
@@ -111,7 +90,7 @@ export const NotificationSettingsDialog: React.FC<Props> = ({ open, userId, onCl
       next.preferences = { ...next.preferences };
       next.preferences[type] = next.preferences[type] || { email: true, push: true, in_app: true };
       next.preferences[type][channel] = value;
-      return next as NotificationPreferences;
+      return next as NotificationSettings;
     });
   };
 
@@ -121,7 +100,7 @@ export const NotificationSettingsDialog: React.FC<Props> = ({ open, userId, onCl
     setError(null);
     const { data, error } = await notificationService.updatePreferences(userId, {
       email_enabled: prefs.email_enabled,
-      push_enabled: prefs.push_enabled,
+      //push_enabled: prefs.push_enabled,
       in_app_enabled: prefs.in_app_enabled,
       email_frequency: prefs.email_frequency,
       preferences: prefs.preferences,
@@ -133,10 +112,6 @@ export const NotificationSettingsDialog: React.FC<Props> = ({ open, userId, onCl
     if (data) setPrefs(data);
     setSaving(false);
     if (!error) onClose(); // ferme sur succès
-  };
-
-  const handleEnablePush = async () => {
-    await enableNotifications({ userId });
   };
 
   return (
@@ -168,15 +143,6 @@ export const NotificationSettingsDialog: React.FC<Props> = ({ open, userId, onCl
               </Typography>
 
               <Stack direction="row" spacing={2} sx={{ mt: 1.5 }}>
-                {canOfferEnable && (
-                  <Button
-                    variant="outlined"
-                    startIcon={<NotificationsActiveIcon />}
-                    onClick={handleEnablePush}
-                  >
-                    Activer les notifications
-                  </Button>
-                )}
               </Stack>
             </Box>
 
@@ -202,7 +168,7 @@ export const NotificationSettingsDialog: React.FC<Props> = ({ open, userId, onCl
                       onChange={(e) => updateGlobal('push_enabled', e.target.checked)}
                     />
                   }
-                  label={<><SmartphoneIcon fontSize="small" />&nbsp;Push navigateur</>}
+                  label={<><SmartphoneIcon fontSize="small" />&nbsp;Push navigateur (bientôt)</>}
                 />
                 <FormControlLabel
                   control={
@@ -258,12 +224,7 @@ export const NotificationSettingsDialog: React.FC<Props> = ({ open, userId, onCl
                           label="Email"
                         />
                         <FormControlLabel
-                          control={
-                            <Switch
-                              checked={!!line.push}
-                              onChange={(e) => updateType(t, 'push', e.target.checked)}
-                            />
-                          }
+                          control={<Switch checked={false} disabled />}
                           label="Push"
                         />
                         <FormControlLabel

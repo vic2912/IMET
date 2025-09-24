@@ -1,15 +1,14 @@
 // src/hooks/useNotifications.ts
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Notification } from '../types/notification';
-import type { NotificationPreferences, NotificationType } from '../types/notification';
+import type { Notification, NotificationSettings, NotificationType } from '../types/notification';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { notificationService } from '../services/notificationService';
 
 export const useNotifications = (userId?: string) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
+  const [preferences, setPreferences] = useState<NotificationSettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -45,24 +44,18 @@ export const useNotifications = (userId?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [userId, page]);
+  }, [userId, page, loading]);
 
   const loadUnreadCount = useCallback(async () => {
     if (!userId) return;
-
     const { data, error } = await notificationService.getUnreadCount(userId);
-    if (!error && data !== undefined) {
-      setUnreadCount(data);
-    }
+    if (!error && data !== undefined) setUnreadCount(data);
   }, [userId]);
 
   const loadPreferences = useCallback(async () => {
     if (!userId) return;
-
     const { data, error } = await notificationService.getPreferences(userId);
-    if (!error && data) {
-      setPreferences(data);
-    }
+    if (!error && data) setPreferences(data);
   }, [userId]);
 
   useEffect(() => {
@@ -76,29 +69,24 @@ export const useNotifications = (userId?: string) => {
     if (!userId) return;
 
     const channel = notificationService.subscribeToNotifications(userId, (notification) => {
+      // *** CHANGEMENT *** : notification arrive déjà avec is_read mappé depuis read_at
       setNotifications(prev => [notification, ...prev]);
 
-      if (!notification.is_read) {
-        setUnreadCount(prev => prev + 1);
-      }
+      if (!notification.is_read) setUnreadCount(prev => prev + 1);
 
       showNotification(notification);
     });
 
     setSubscription(channel);
-
-    return () => {
-      if (channel) channel.unsubscribe();
-    };
+    return () => { if (channel) channel.unsubscribe(); };
   }, [userId]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     const { error } = await notificationService.markAsRead(notificationId);
-
     if (!error) {
       setNotifications(prev =>
         prev.map(notif =>
-          notif.id === notificationId ? { ...notif, is_read: true } : notif
+          notif.id === notificationId ? { ...notif, is_read: true, read_at: new Date().toISOString() } : notif // *** CHANGEMENT ***
         )
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -107,18 +95,16 @@ export const useNotifications = (userId?: string) => {
 
   const markAllAsRead = useCallback(async () => {
     if (!userId) return;
-
     const { error } = await notificationService.markAllAsRead(userId);
-
     if (!error) {
-      setNotifications(prev => prev.map(notif => ({ ...notif, is_read: true })));
+      const now = new Date().toISOString();
+      setNotifications(prev => prev.map(notif => ({ ...notif, is_read: true, read_at: now }))); // *** CHANGEMENT ***
       setUnreadCount(0);
     }
   }, [userId]);
 
   const deleteNotification = useCallback(async (notificationId: string) => {
     const { error } = await notificationService.delete(notificationId);
-
     if (!error) {
       setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
 
@@ -129,19 +115,14 @@ export const useNotifications = (userId?: string) => {
     }
   }, [notifications]);
 
-  const updatePreferences = useCallback(async (newPreferences: Partial<NotificationPreferences>) => {
+  const updatePreferences = useCallback(async (newPreferences: Partial<NotificationSettings>) => {
     if (!userId) return;
-
     const { data, error } = await notificationService.updatePreferences(userId, newPreferences);
-
-    if (!error && data) {
-      setPreferences(data);
-    }
+    if (!error && data) setPreferences(data);
   }, [userId]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loading) return;
-
     setPage(prev => prev + 1);
     await loadNotifications();
   }, [hasMore, loading, loadNotifications]);
@@ -151,20 +132,9 @@ export const useNotifications = (userId?: string) => {
     await loadUnreadCount();
   }, [loadNotifications, loadUnreadCount]);
 
-  const createNotification = useCallback(async (
-    targetUserId: string,
-    type: NotificationType,
-    variables?: Record<string, any>
-  ) => {
-    const { error } = await notificationService.createFromTemplate(
-      targetUserId,
-      type,
-      variables
-    );
-
-    if (error) {
-      setError(error);
-    }
+  const createNotification = useCallback(async (targetUserId: string, type: NotificationType, variables?: Record<string, any>) => {
+    const { error } = await notificationService.createFromTemplate(targetUserId, type, variables);
+    if (error) setError(error);
   }, []);
 
   return {
@@ -173,6 +143,7 @@ export const useNotifications = (userId?: string) => {
     preferences,
     loading,
     error,
+    hasMore,
     markAsRead,
     markAllAsRead,
     deleteNotification,

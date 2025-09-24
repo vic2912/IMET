@@ -45,7 +45,7 @@ const GENERIC_ADULT_ID = 'adulte_generique';
 const GENERIC_CHILD_ID = 'enfant_generique';
 
 // --- Utils date de naissance (robustes pour tri uniquement) ---
-const parseBirthSafe = (d?: string): Date | null => {
+const parseBirthSafe = (d?: string | null): Date | null => {
   if (!d) return null;
   if (/^\d{4}-\d{2}-\d{2}/.test(d)) {
     const dt = new Date(d);
@@ -60,7 +60,7 @@ const parseBirthSafe = (d?: string): Date | null => {
 };
 
 // Tri du plus âgé (date + ancienne) au plus jeune
-const byBirthDateAsc = (a?: string, b?: string) => {
+const byBirthDateAsc = (a?: string | null, b?: string | null) => {
   const da = parseBirthSafe(a);
   const db = parseBirthSafe(b);
   if (!da && !db) return 0;
@@ -68,8 +68,6 @@ const byBirthDateAsc = (a?: string, b?: string) => {
   if (!db) return -1;
   return da.getTime() - db.getTime();
 };
-
-
 
 // --- Lecture stricte depuis les relations présentes dans 'me' ---
 const getSpouseIdStrict = (me?: User) => {
@@ -117,7 +115,7 @@ const getSpouseIdSmart = (
 };
 
 // IMPORTANT : “mineur connu” = une date est présente ET isAdult(date) === false.
-const isMinorKnown = (birth?: string) => !!birth && !isAdult(birth);
+const isMinorKnown = (birth?: string | null) => !!birth && !isAdult(birth ?? undefined);
 
 // --- Utils numériques ---
 const clamp = (n: number, min: number, max?: number) =>
@@ -489,9 +487,9 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
     console.debug(`${TAG} myChildIds:`, Array.from(myChildIds));
 
     // Enfants candidats
-    let childrenCandidates = closeFamily.filter(f => myChildIds.has(f.id) && !!f.birth_date && !isAdult(f.birth_date));
+    let childrenCandidates = closeFamily.filter(f => myChildIds.has(f.id) && !!f.birth_date && !isAdult(f.birth_date ?? undefined));
     if (childrenCandidates.length === 0) {
-      childrenCandidates = closeFamily.filter(f => !!f.birth_date && !isAdult(f.birth_date));
+      childrenCandidates = closeFamily.filter(f => !!f.birth_date && !isAdult(f.birth_date ?? undefined));
       console.warn('[BookingWizard] Fallback enfants par âge (relations vides / non concordantes)');
     }
     const childrenSorted = childrenCandidates.sort((a, b) => byBirthDateAsc(a.birth_date, b.birth_date));
@@ -553,12 +551,17 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
 
   const getAdultOptions = () => {
     const base: { id: string; name: string; is_student: boolean; birth_date?: string }[] = [
-      { id: user!.id, name: user!.full_name, is_student: !!user!.is_student, birth_date: user!.birth_date },
+      {
+        id: user!.id,
+        name: user!.full_name ?? '—',
+        is_student: !!user!.is_student,
+        birth_date: user!.birth_date ?? undefined,
+      },
     ];
 
     const others = closeFamily
-      .filter(f => isAdult(f.birth_date) || !f.birth_date)
-      .map(f => ({ id: f.id, name: f.full_name, is_student: !!f.is_student, birth_date: f.birth_date }));
+      .filter(f => isAdult(f.birth_date ?? undefined) || !f.birth_date)
+      .map(f => ({ id: f.id, name: f.full_name ?? '—', is_student: !!f.is_student, birth_date: f.birth_date ?? undefined }));
 
     // conjoint “fetché” si pas dans closeFamily
     const spouseId = getSpouseIdSmart(user!, { overrideId: spouseIdOverride, spouseProfile });
@@ -567,10 +570,15 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
       spouseProfile.id === spouseId &&
       !others.some(o => o.id === spouseProfile.id) &&
       spouseProfile.id !== user!.id &&
-      (isAdult(spouseProfile.birth_date) || !spouseProfile.birth_date);
+      (isAdult(spouseProfile.birth_date ?? undefined) || !spouseProfile.birth_date);
 
     const spouseOpt = addSpouse
-      ? [{ id: spouseProfile.id, name: spouseProfile.full_name, is_student: !!spouseProfile.is_student, birth_date: spouseProfile.birth_date }]
+      ? [{
+          id: spouseProfile.id,
+          name: spouseProfile.full_name ?? '—',
+          is_student: !!spouseProfile.is_student,
+          birth_date: spouseProfile.birth_date ?? undefined
+        }]
       : [];
 
     const map = new Map<string, { id: string; name: string; is_student: boolean; birth_date?: string }>();
@@ -586,7 +594,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
     const myChildIds = getMyChildIds(user!);
 
     const byRelation = closeFamily.filter(f => myChildIds.has(f.id));
-    const byAgeFallback = closeFamily.filter(f => !!f.birth_date && !isAdult(f.birth_date));
+    const byAgeFallback = closeFamily.filter(f => !!f.birth_date && !isAdult(f.birth_date ?? undefined));
     const source = byRelation.length > 0 ? byRelation : byAgeFallback;
 
     console.debug('[BookingWizard] getChildOptions source =', byRelation.length > 0 ? 'relations' : 'ageFallback', {
@@ -600,9 +608,9 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
     return [
       ...sorted.map(f => ({
         id: f.id,
-        name: f.full_name,
+        name: f.full_name ?? '—',
         is_student: !!f.is_student,
-        birth_date: f.birth_date
+        birth_date: f.birth_date ?? undefined
       })),
       { id: GENERIC_CHILD_ID, name: 'Enfant', is_student: false, birth_date: undefined }
     ];
@@ -823,7 +831,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
                     // Si on efface l'arrivée, on efface aussi le départ
                     if (!newDate) setEndDate(null);
                   }}
-  
+
                   reduceAnimations
                   closeOnSelect
                   slotProps={{
@@ -974,7 +982,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
                               updated[index].person_type = isAdultRow ? 'adulte_amis' : 'enfant_amis';
                             } else {
                               updated[index].id = chosen.id;
-                              updated[index].name = chosen.name;
+                              updated[index].name = chosen.name ?? (isAdultRow ? 'Adulte' : 'Enfant');
 
                               if (isAdultRow) {
                                 const matchingAdult = [user!, ...closeFamily].find(f => f.id === chosen.id);
@@ -982,7 +990,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ open, onClose }) =
                                   ? (matchingAdult.is_student ? 'etudiant_famille' : 'adulte_famille')
                                   : 'adulte_amis';
                               } else {
-                                const matchingChild = closeFamily.find(f => f.id === chosen.id && !isAdult(f.birth_date));
+                                const matchingChild = closeFamily.find(f => f.id === chosen.id && !isAdult(f.birth_date ?? undefined));
                                 updated[index].person_type = matchingChild ? 'enfant_famille' : 'enfant_amis';
                               }
                             }

@@ -14,7 +14,7 @@ import {
 import FamilyRestroomOutlinedIcon from '@mui/icons-material/FamilyRestroomOutlined';
 import { Cottage, Inventory2, FactCheck, Article, ExpandLess, ExpandMore } from '@mui/icons-material';
 
-import { NotificationBadge } from '../NotificationBadge';
+import { NotificationsBell } from '../NotificationsBell';
 import type { User } from '../../types/family';
 import { useAuth } from '../../hooks/useAuth';
 import { UserDetailsDialog } from '../UserDetailsDialog';
@@ -273,7 +273,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogoutSuccess })
             IMet - Gestion Maison Familiale
           </Typography>
           {isMobile && (
-            <NotificationBadge
+            <NotificationsBell
               userId={user.id}
               onOpenSettings={() => setNotifSettingsOpen(true)}
             />
@@ -284,7 +284,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogoutSuccess })
                           onClick={() => setProfileOpen(true)}>
                 {user.full_name}
               </Typography>
-              <NotificationBadge userId={user.id} onOpenSettings={() => setNotifSettingsOpen(true)} />
+              <NotificationsBell userId={user.id} onOpenSettings={() => setNotifSettingsOpen(true)} />
               <Button color="inherit" startIcon={<Logout />} onClick={handleLogout}>Déconnexion</Button>
             </>
           )}

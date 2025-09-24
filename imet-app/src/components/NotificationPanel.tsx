@@ -1,35 +1,14 @@
 // src/components/NotificationPanel.tsx
 
 import React, { useState } from 'react';
-import {
-  Popover,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  ListItemIcon,
-  Typography,
-  Box,
-  Button,
-  Divider,
-  CircularProgress,
-  Alert,
-  IconButton,
-  Chip
-} from '@mui/material';
-import {
-  Notifications as NotificationsIcon,
-  Cancel,
-  Euro,
-  CalendarToday,
-  Settings,
-  MarkEmailRead,
-  Delete,
-  Refresh
-} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+
+import { Popover, List, ListItem, ListItemButton, ListItemText, ListItemIcon, Typography, Box, Button, Divider, CircularProgress, Alert, IconButton, Chip } from '@mui/material'; 
+import { Notifications as NotificationsIcon, Cancel, Euro, CalendarToday, Settings, MarkEmailRead, Delete, Refresh } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { Notification, NotificationType } from '../types/notification';
+import { buildChecklistUrl } from '../routing/buildUrls';
 
 interface NotificationPanelProps {
   anchorEl: HTMLElement | null;
@@ -49,6 +28,9 @@ interface NotificationPanelProps {
 // Icônes par type de notification
 const getNotificationIcon = (type: NotificationType) => {
   switch (type) {
+    case 'payment_reminder':
+     return <Euro color="primary" />;
+
     case 'booking_created_for_you':
     case 'booking_confirmed':
     case 'booking_reminder':
@@ -98,13 +80,53 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
     setDeletingId(null);
   };
 
-  const handleMarkAsRead = (notificationId: string, isRead: boolean) => {
-    if (!isRead) {
-      onMarkAsRead(notificationId);
-    }
-  };
-
   const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const navigate = useNavigate();
+
+  /**
+   * Résout l’URL d’action à partir de la notification.
+   * - 1) si data.action_url est présent, on l’utilise (absolue ou relative)
+   * - 2) sinon, si action === 'open_checklist' + moment -> on construit l’URL
+   * - 3) fallback par type (arrival_checklist / departure_checklist)
+   * - 4) sinon, null (pas d’action)
+   */
+  function resolveActionUrl(n: Notification): string | null {
+    const url: unknown = n?.data?.action_url;
+    if (typeof url === 'string' && url.length > 0) return url;
+
+    const action: unknown = n?.data?.action;
+    const moment: unknown = n?.data?.moment;
+    if (action === 'open_checklist' && (moment === 'arrival' || moment === 'departure')) {
+      return buildChecklistUrl(moment);
+    }
+
+    // Fallback sans data : en fonction du type
+    if (n.type === 'arrival_checklist')   return buildChecklistUrl('arrival');
+    if (n.type === 'departure_checklist') return buildChecklistUrl('departure');
+
+    return null;
+  }
+
+  /** Marque comme lu puis navigue si une action est disponible */
+  function handleItemClick(n: Notification) {
+    if (!n.is_read) onMarkAsRead(n.id);
+
+    const actionUrl = resolveActionUrl(n);
+    if (actionUrl) {
+      onClose(); // ferme le popover avant de naviguer
+      // Si URL absolue -> redirection pleine page ; sinon -> navigation SPA
+      if (/^https?:\/\//i.test(actionUrl)) {
+        window.location.assign(actionUrl);
+      } else {
+        navigate(actionUrl);
+      }
+      return;
+    }
+
+    // Pas d'action => rien de plus que "marquer comme lu"
+  }
+
 
   return (
     <Popover
@@ -196,7 +218,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 }
               >
                 <ListItemButton
-                  onClick={() => handleMarkAsRead(notification.id, notification.is_read)}
+                  onClick={() => handleItemClick(notification)}
                   sx={{
                     bgcolor: notification.is_read ? 'transparent' : 'action.hover',
                     '&:hover': {

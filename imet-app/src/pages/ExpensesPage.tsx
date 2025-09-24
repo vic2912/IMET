@@ -23,7 +23,7 @@ import {
 import { Add } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useExpenses } from '../hooks/useExpenses';
-import { useNotification } from '../hooks/useNotification';
+import { useNotifications } from '../hooks/useNotifications';
 import { useAuth } from '../hooks/useAuth';
 import type { ExpenseFormData, CreateExpenseData } from '../types/expense';
 import { format } from 'date-fns';
@@ -32,7 +32,7 @@ import { fr } from 'date-fns/locale';
 export const ExpensesPage: React.FC = () => {
   const { user } = useAuth();
   const { expenses, createExpense, stats } = useExpenses();
-  const { showSuccess, showError } = useNotification();
+  //const { showSuccess, showError } = useNotifications();
 
   const [openExpenseDialog, setOpenExpenseDialog] = useState(false);
   const [expenseForm, setExpenseForm] = useState<ExpenseFormData>({

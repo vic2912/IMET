@@ -6,7 +6,7 @@ import type {
   FamilyRelation,
   CreateFamilyRelationData
 } from '../types/family';
-import { useNotification } from './useNotification';
+import { useSnackbar } from 'notistack';
 
 export const useUsers = (currentUserId?: string) => {
   const [users, setUsers] = useState<User[]>([]);
@@ -15,7 +15,9 @@ export const useUsers = (currentUserId?: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { showSuccess, showError } = useNotification();
+  const { enqueueSnackbar } = useSnackbar();
+  const notifySuccess = (msg: string) => enqueueSnackbar(msg, { variant: 'success' });
+  const notifyError = (msg: string) => enqueueSnackbar(msg, { variant: 'error' });
 
   const loadUsers = useCallback(async () => {
     try {
@@ -24,17 +26,17 @@ export const useUsers = (currentUserId?: string) => {
       const { data, error } = await userService.getUsers(true);
       if (error) {
         setError(error);
-        showError('Erreur lors du chargement des utilisateurs');
+        notifyError('Erreur lors du chargement des utilisateurs');
         return;
       }
       setUsers(data || []);
     } catch (err: any) {
       setError(err.message);
-      showError('Erreur lors du chargement des utilisateurs');
+      notifyError('Erreur lors du chargement des utilisateurs');
     } finally {
       setLoading(false);
     }
-  }, [showError]);
+  }, [enqueueSnackbar]);
 
   const loadCurrentUser = useCallback(async () => {
     if (!currentUserId) return;
@@ -61,14 +63,14 @@ export const useUsers = (currentUserId?: string) => {
     try {
       const { data, error } = await userService.createUser(userData);
       if (error) {
-        showError('Erreur lors de la création de l\'utilisateur');
+        notifyError('Erreur lors de la création de l\'utilisateur');
         return null;
       }
-      showSuccess('Utilisateur créé avec succès');
+      notifySuccess('Utilisateur créé avec succès');
       await loadUsers();
       return data;
     } catch (err: any) {
-      showError(err.message);
+      notifyError(err.message);
       return null;
     }
   };
@@ -83,18 +85,18 @@ export const useUsers = (currentUserId?: string) => {
   const addFamilyRelation = async (relation: CreateFamilyRelationData) => {
     const { error } = await userService.addFamilyRelation(relation);
     if (error) {
-      showError('Erreur lors de l\'ajout du lien familial');
+      notifyError('Erreur lors de l\'ajout du lien familial');
     } else {
-      showSuccess('Lien familial ajouté');
+      notifySuccess('Lien familial ajouté');
     }
   };
 
   const removeFamilyRelation = async (relationId: string) => {
     const { error } = await userService.removeFamilyRelation(relationId);
     if (error) {
-      showError('Erreur lors de la suppression du lien familial');
+      notifyError('Erreur lors de la suppression du lien familial');
     } else {
-      showSuccess('Lien familial supprimé');
+      notifySuccess('Lien familial supprimé');
     }
   };
 

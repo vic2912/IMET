@@ -1,10 +1,9 @@
-// src/types/notifications.ts
+// src/types/notification.ts
 
 export type NotificationType = 
   | 'arrival_checklist'
   | 'departure_checklist'
-  | 'payment_reminder_j7'
-  | 'payment_reminder_j30'
+  | 'payment_reminder'
   | 'event_created'
   | 'event_closed'
   | 'booking_created_for_you'
@@ -21,6 +20,41 @@ export type NotificationType =
   | 'welcome';
 
 export type NotificationChannel = 'in_app' | 'push' | 'email';
+// Action front déclenchée au clic sur la notif
+export type NotificationAction =
+  | 'open_checklist'
+  | 'open_payment'
+  | 'open_booking'
+  | 'open_notice'
+  | string; // extensible
+
+export type ChecklistMoment = 'arrival' | 'departure';
+
+// Métadonnées transportées dans la notif (JSONB en base)
+export interface NotificationData {
+  /** Intention d’action côté front (navigation) */
+  action?: NotificationAction;
+
+  /** Lien direct (absolu ou relatif) — compat éventuelle avec anciennes notifs */
+  action_url?: string;
+
+  /** Contexte pour open_checklist */
+  moment?: ChecklistMoment;
+
+  /** Contexte serveur/analytique + dédoublonnage */
+  booking_id?: string;
+
+  /** Étape d’envoi (ex: J-1, J, J+7, J+30) */
+  stage?: 'j-1' | 'j' | 'j7' | 'j30';
+
+  /** Label CTA éventuel (UI) */
+  cta_label?: string;
+
+  /** Pour rester extensible sans retoucher les types */
+  [k: string]: unknown;
+}
+
+
 export type EmailFrequency = 'immediate' | 'daily' | 'weekly' | 'never';
 export type NotificationPriority = 1 | 2 | 3 | 4 | 5;
 
@@ -30,7 +64,7 @@ export interface Notification {
   type: NotificationType;
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: NotificationData;
   
   // États
   is_read: boolean;
@@ -59,12 +93,13 @@ export interface CreateNotificationData {
   type: NotificationType;
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: NotificationData;
   priority?: NotificationPriority;
   expires_at?: string;
   channels?: NotificationChannel[];
 }
 
+// AReprendre - Faut-il garder par la suite cette partie qui est remplacée par NotificationSetting (Sept2025)
 export interface NotificationPreferences {
   id: string;
   user_id: string;
@@ -181,16 +216,12 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, {
     message: 'Pensez à la checklist de départ et au règlement du séjour.',
     priority: 3
   },
-  payment_reminder_j7: {
+  payment_reminder: {
     title: 'Rappel de paiement',
-    message: 'Votre séjour n’est pas encore réglé (J+7). Merci de finaliser le paiement.',
+    message: 'Votre séjour n’est pas encore réglé. Merci de finaliser le paiement.',
     priority: 4
   },
-  payment_reminder_j30: {
-    title: 'Deuxième rappel de paiement',
-    message: 'Votre séjour n’est toujours pas réglé (J+30). Merci de le régulariser.',
-    priority: 4
-  },
+
   event_created: {
     title: 'Nouvel événement',
     message: 'Un nouvel événement a été déclaré : {{event_title}}',
@@ -202,3 +233,28 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, {
     priority: 2
   }
 };
+
+
+// Type combiné utilisé par l'UI (pas d'id/created_at/updated_at requis)
+export interface NotificationSettings {
+  user_id: string; // pratique à renvoyer
+  // Canaux globaux
+  email_enabled: boolean;
+  push_enabled: boolean; // on le garde pour l’UI même s’il est inactif
+  in_app_enabled: boolean;
+
+  // Fréquence email
+  email_frequency: EmailFrequency;
+
+  // Heures de silence
+  quiet_hours_start?: string;
+  quiet_hours_end?: string;
+  timezone: string;
+
+  // Préférences par type
+  preferences: Record<NotificationType, {
+    email: boolean;
+    push: boolean;
+    in_app: boolean;
+  }>;
+}
