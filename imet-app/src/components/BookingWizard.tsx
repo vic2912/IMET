@@ -39,7 +39,7 @@ interface BookingWizardProps {
 const TAG = '[BookingWizard]';
 
 const timeOptions: ArrivalTime[] = ['morning', 'afternoon', 'evening'];
-const timeLabels = { morning: 'Matin', afternoon: 'Après-midi', evening: 'Soir' };
+const timeLabels = { morning: 'Avant déjeuner', afternoon: 'Avant diner', evening: 'Après diner' };
 const steps = ['Informations générales', 'Participants'];
 const GENERIC_ADULT_ID = 'adulte_generique';
 const GENERIC_CHILD_ID = 'enfant_generique';

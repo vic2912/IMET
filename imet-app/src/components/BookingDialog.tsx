@@ -27,9 +27,9 @@ export const BookingDialog: React.FC<BookingDialogProps> = ({ open, booking, onC
   };
   const getTimeLabel = (code: string): string => {
     switch (code) {
-      case 'morning': return 'Matin';
-      case 'afternoon': return 'Après-midi';
-      case 'evening': return 'Soir';
+      case 'morning': return 'Avant déjeuner';
+      case 'afternoon': return 'Avant diner';
+      case 'evening': return 'Après diner';
       default: return code;
     }
   };

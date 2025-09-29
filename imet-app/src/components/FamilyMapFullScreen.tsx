@@ -323,9 +323,14 @@ export const FamilyMapFullScreen: React.FC<Props> = ({ open, rootId, onClose }) 
       for (const ch of children) {
         const w = placeSubtree(ch);
         if (!first) cursor += SIBLING_GAP;
-        ch.PNMin += cursor;
-        ch.PNMax += cursor;
-        ch.PH    += cursor;
+        const dxToZero = -ch.PNMin;
+        shift(ch, dxToZero);
+        shift(ch, cursor);
+        cursor += w;
+
+        //ch.PNMin += cursor;
+        //ch.PNMax += cursor;
+        //ch.PH    += cursor;
         cursor = ch.PNMax;
         first = false;
       }

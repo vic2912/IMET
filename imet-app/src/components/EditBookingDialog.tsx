@@ -27,7 +27,6 @@ import type {
   PersonDetailsForServer
 } from '../types/booking';
 
-type FamilyItem = { id: string; full_name: string; birth_date: string | null };
 type FamilySelectItem = { id: string; name: string; birth_date: string | null };
 
 type DialogScope =
@@ -45,10 +44,11 @@ interface EditBookingDialogProps {
 
 const timeOptions: ArrivalTime[] = ['morning', 'afternoon', 'evening'];
 const timeLabels: Record<ArrivalTime | DepartureTime, string> = {
-  morning: 'Matin',
-  afternoon: 'Après-midi',
-  evening: 'Soir',
+  morning: 'Avant déjeuner',
+  afternoon: 'Avant diner',
+  evening: 'Après diner',
 };
+const safeName = (n?: string | null) => (n && n.trim() ? n : 'Sans nom');
 
 export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   open,
@@ -76,7 +76,7 @@ export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     const source = (prefetchedFamily && prefetchedFamily.length ? prefetchedFamily : closeFamily) ?? [];
      return source.map((f: any) => ({
        id: f.id,
-       name: f.full_name,
+       name: safeName(f.full_name),
        birth_date: f.birth_date ?? null, // <-- null au lieu d'undefined
      }));
    }, [prefetchedFamily, closeFamily]);
@@ -121,7 +121,7 @@ export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const getAdultOptions = useMemo(() => {
     const base: { id: string; name: string }[] = [];
     // côté user : on peut préfixer par l'utilisateur courant si utile
-    if (!isAdmin && user?.id) base.push({ id: user.id, name: user.full_name });
+    if (!isAdmin && user?.id) base.push({ id: user.id, name: safeName(user.full_name) });
     return [
       ...base,
       ...selectablePool
@@ -134,7 +134,8 @@ export const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   // Options enfants = pool filtrée par "mineur"
   const getChildOptions = useMemo(() => {
     const base: { id: string; name: string }[] = [];
-    if (!isAdmin && user?.id) base.push({ id: user.id, name: user.full_name });
+    if (!isAdmin && user?.id) base.push({ id: user.id, name: safeName(user.full_name) });
+
     return [
       ...base,
       ...selectablePool
