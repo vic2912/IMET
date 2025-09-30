@@ -658,7 +658,7 @@ useEffect(() => {
                   variant="contained"
                   size="small"
                   color="success"
-                  onClick={() => markPaid(b)}
+                  onClick={() => handleStatusToggle(b)}
                   sx={{ textTransform: 'none' }}
                 >
                   Marquer comme payé

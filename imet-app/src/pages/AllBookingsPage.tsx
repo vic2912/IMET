@@ -200,7 +200,7 @@ export const AllBookingsPage: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [cancelFor, setCancelFor] = useState<Booking | null>(null);
   const { enqueueSnackbar } = useSnackbar();
-
+  const [toggleFor, setToggleFor] = useState<Booking | null>(null);
   const updateStatus = useUpdateBookingStatus(
     userId ? { scope: 'user', userId } : { scope: 'all' }
   );
@@ -250,18 +250,28 @@ export const AllBookingsPage: React.FC = () => {
   // Actions utilisateur (identiques à ta page “Mes séjours”)
   const handleStatusToggle = (booking: Booking) => {
     if (booking.status === 'cancelled') return;
-    const newStatus: SejourStatus = booking.status === 'paid' ? 'pending' : 'paid';
+    setToggleFor(booking); // 👉 ouvre la confirmation
+  };
+
+  const confirmStatusToggle = () => {
+    if (!toggleFor) return;
+    const newStatus: SejourStatus = toggleFor.status === 'paid' ? 'pending' : 'paid';
     updateStatus.mutate(
-      { id: booking.id, status: newStatus },
+      { id: toggleFor.id, status: newStatus },
       {
-        onSuccess: () =>
+        onSuccess: () => {
           enqueueSnackbar(
             newStatus === 'paid' ? 'Séjour marqué comme payé' : 'Séjour marqué comme non payé',
             { variant: 'success' }
-          ),
+          );
+          setToggleFor(null);
+        },
+        onError: () => setToggleFor(null),
       }
     );
   };
+
+
   const handleCancel = (booking: Booking) => {
     if (booking.status === 'cancelled') return;
     setCancelFor(booking);
@@ -490,6 +500,19 @@ export const AllBookingsPage: React.FC = () => {
         confirmLabel="Annuler le séjour"
         onCancel={() => setCancelFor(null)}
         onConfirm={confirmCancel}
+      />
+      
+      <ConfirmDialog
+        open={!!toggleFor}
+        title={toggleFor?.status === 'paid'
+          ? 'Marquer le séjour comme NON payé'
+          : 'Marquer le séjour comme payé'}
+        message={toggleFor
+          ? `Confirmez-vous le changement de statut du séjour du ${format(parseISO(toggleFor.start_date),'dd/MM/yyyy')} au ${format(parseISO(toggleFor.end_date),'dd/MM/yyyy')} ?`
+          : ''}
+        confirmLabel={toggleFor?.status === 'paid' ? 'Marquer non payé' : 'Marquer payé'}
+        onCancel={() => setToggleFor(null)}
+        onConfirm={confirmStatusToggle}
       />
 
       {detailsFor && (
