@@ -1,4 +1,4 @@
-// src/components/admin/CreateUserDialog.tsx
+// src/components/CreateUserDialog.tsx
 
 import React, { useState } from 'react';
 import {

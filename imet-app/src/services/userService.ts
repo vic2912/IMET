@@ -2,53 +2,76 @@
 
 import { supabase, executeQuery } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
 
 import type { User, CreateUserData, FamilyRelation, CreateFamilyRelationData, RelationshipType, Guest
 } from '../types/family';
 
-
+async function invokeFamilyGraphRebuild(reason?: string) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const { error } = await supabase.functions.invoke('family-graph-rebuild', {
+      body: { reason: reason ?? 'app-write' },
+      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+    });
+    if (error) console.warn('family-graph-rebuild error:', error.message);
+  } catch {
+    // silencieux
+  }
+}
 
 export class UserService {
   async createUser(data: CreateUserData): Promise<{ data: User | null; error: string | null }> {
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
+      // 1) Vérifier l'authentification (on crée un user via une action admin)
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
       if (!token) return { data: null, error: 'Utilisateur non authentifié' };
 
-      const payload = {
-        email: data.email,
-        password: data.password,
-        full_name: data.full_name,
-        phone: data.phone || null,
-        birth_date: data.birth_date || null,
-        role: data.role || 'user',
-        is_active: data.is_active ?? true,
-        allergies: data.allergies || null
-      };
+      // 2) Check d’existence SANS 406
+      const { count, error: countError } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('email', data.email);
 
-      const response = await fetch('https://dcydlyjmfhzhjtjtjcoo.supabase.co/functions/v1/create_user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+      if (countError) return { data: null, error: countError.message };
+      if ((count ?? 0) > 0) {
+        return { data: null, error: 'Un utilisateur avec cet email existe déjà.' };
+      }
+
+      // 3) Normaliser la date → yyyy-MM-dd (Edge Function friendly)
+      const birth_date =
+        data.birth_date
+          ? (typeof data.birth_date === 'string'
+              ? data.birth_date.slice(0, 10) // 'YYYY-MM-DD...' -> 'YYYY-MM-DD'
+              : format(data.birth_date as Date, 'yyyy-MM-dd'))
+          : null;
+
+      // 4) Appel de l’Edge Function via SDK (pas d’URL en dur)
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('create_user', {
+        body: {
+          email: data.email,
+          password: data.password,
+          full_name: data.full_name,
+          phone: data.phone || null,
+          birth_date,
+          role: data.role || 'user',
+          is_active: data.is_active ?? true,
+          allergies: (data as any).allergies || null,
         },
-        body: JSON.stringify(payload)
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      const json = await response.json();
-      if (!response.ok) {
-        return { data: null, error: json.error || "Erreur lors de la création de l'utilisateur." };
+      if (fnError) {
+        return { data: null, error: fnError.message || "Erreur lors de la création de l'utilisateur." };
       }
 
-      return { data: json.user, error: null };
+      return { data: (fnData as any)?.user ?? null, error: null };
     } catch (err: any) {
-      if (err.message.includes('Failed to fetch')) {
-        return {
-          data: null,
-          error: "Serveur injoignable. Vérifiez votre connexion."
-        };
+      if (err.message?.includes('Failed to fetch')) {
+        return { data: null, error: 'Serveur injoignable. Vérifiez votre connexion.' };
       }
-      return { data: null, error: err.message || "Erreur inconnue" };
+      return { data: null, error: err.message || 'Erreur inconnue' };
     }
   }
 
@@ -76,7 +99,7 @@ export class UserService {
         console.error('❌ Supabase update error:', error.message);
         return { data: null, error };
       }
-
+      await invokeFamilyGraphRebuild('updateUser');
       return {
         data: { id: userId, ...payload } as User,
         error: null
@@ -151,7 +174,7 @@ export class UserService {
       console.error("Erreur création guest :", error);
       return { data: null, error: error.message };
     }
-
+    await invokeFamilyGraphRebuild('createGuestProfile');
     return { data: guest as Guest, error: null };
   }
 
@@ -238,7 +261,7 @@ export class UserService {
           is_guardian: inverseIsGuardian
         });
       }
-
+      await invokeFamilyGraphRebuild('addFamilyRelation');
       return { data: null, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
@@ -259,6 +282,7 @@ export class UserService {
           .delete()
           .eq('user_id', relation.related_user_id)
           .eq('related_user_id', relation.user_id);
+        await invokeFamilyGraphRebuild('removeFamilyRelation');
       }
 
       return { error: null };

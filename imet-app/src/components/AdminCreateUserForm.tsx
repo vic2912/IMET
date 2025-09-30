@@ -7,8 +7,7 @@ import {
   InputLabel, MenuItem, Select, Stack, TextField, Typography, Alert
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { format } from "date-fns";
-import { supabase } from "../services/supabase";
+import { userService } from "../services/userService";
 
 type FormState = {
   email: string;
@@ -62,52 +61,26 @@ export default function AdminCreateUserForm() {
     }
 
     setLoading(true);
-
     try {
-      const { data: existing } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", form.email)
-        .single();
-
-      if (existing) {
-        setError("Un utilisateur avec cet email existe déjà.");
-        setLoading(false);
-        return;
-      }
-
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      if (!token) throw new Error("Utilisateur non authentifié !");
-
-      // On sérialise la date en yyyy-MM-dd pour l'API
-      const payload = {
-        ...form,
-        birth_date: form.birth_date ? format(form.birth_date, "yyyy-MM-dd") : undefined,
-      };
-
-      // Ligne développement
-      //const response = await fetch("https://dcydlyjmfhzhjtjtjcoo.supabase.co/functions/v1/create_user", {
-        // Ligne Production
-      const response = await fetch("https://xwxlmrzemlrxtzowznfv.supabase.co/functions/v1/create_user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
+      const { data, error: svcError } = await userService.createUser({
+        email: form.email,
+        password: form.password,
+        full_name: form.full_name,
+        phone: form.phone || undefined,
+        birth_date: form.birth_date ? form.birth_date.toISOString() : undefined,
+        role: form.role,
+        is_active: form.is_active,
       });
 
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Erreur inconnue");
+      if (svcError) throw new Error(svcError);
 
-      setMessage(`✅ Utilisateur créé : ${result.user.full_name}`);
+      setMessage(`✅ Utilisateur créé : ${data?.full_name ?? form.full_name}`);
       setForm({
         email: "",
         password: "",
         full_name: "",
         phone: "",
-        birth_date: null,  // ← on reset à null
+        birth_date: null,
         role: "user",
         is_active: true,
       });
@@ -117,6 +90,7 @@ export default function AdminCreateUserForm() {
       setLoading(false);
     }
   };
+
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 500, mx: "auto", mt: 4 }}>
