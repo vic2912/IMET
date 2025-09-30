@@ -117,8 +117,10 @@ export default function CareChecklistsPage() {
       try {
         const { data, error } = await supabase
           .from('checklist_actions')
-          .select('id,label,sections,comment,is_active') // si vous avez ajouté sort_order, vous pouvez l’inclure ici
-          .eq('is_active', true);
+          .select('id,label,sections,comment,is_active,sort_order')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true, nullsFirst: false })
+          .order('label', { ascending: true });
         if (error) throw error;
 
         const rows = (data ?? []) as ActionRow[];
